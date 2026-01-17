@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:readme_blogapp/core/utils/assets_path.dart';
 
@@ -18,6 +19,7 @@ class BottomNavbar extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(30.0),
         child: Container(
+          height: 60,
           color: Color(0xff1F1F1F),
           padding: const EdgeInsets.symmetric(vertical: 10),
           child: Row(
@@ -57,11 +59,11 @@ class BottomNavbar extends StatelessWidget {
               ),
             ),
             if (isSelected) ...[
-              const SizedBox(width: 6),
+               SizedBox(width: 6.w),
               Text(
                 _labelForIndex(index),
-                style: const TextStyle(
-                  color: Color(0xffFFFFFF),
+                style: TextStyle(
+                  color: const Color(0xffFFFFFF),
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
