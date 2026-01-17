@@ -14,24 +14,21 @@ class BottomNavbar extends StatelessWidget {
   });
   @override
   Widget build(BuildContext) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(30.0),
-        child: Container(
-          height: 60,
-          color: Color(0xff1F1F1F),
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _navItem(AssetsPath.home, 0),
-              _navItem(AssetsPath.search, 1),
-              _navItem(AssetsPath.create, 2),
-              _navItem(AssetsPath.trending, 3),
-              _navItem(AssetsPath.profile, 4),
-            ],
-          ),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(40.r),
+      child: Container(
+        height: 75.h,
+        color: Color(0xff1F1F1F),
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _navItem(AssetsPath.home, 0),
+            _navItem(AssetsPath.search, 1),
+            _navItem(AssetsPath.create, 2),
+            _navItem(AssetsPath.trending, 3),
+            _navItem(AssetsPath.profile, 4),
+          ],
         ),
       ),
     );
@@ -40,40 +37,51 @@ class BottomNavbar extends StatelessWidget {
   Widget _navItem(String icon, int index) {
     final isSelected = currentIndex == index;
 
-    return GestureDetector(
-      onTap: () => onTap(index),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? Color(0xff363636) : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          children: [
-            SvgPicture.asset(
-              icon,
-              height: 22,
-              colorFilter: ColorFilter.mode(
-                isSelected ? Color(0xffFFFFFF) : Color(0xffA8A7A8),
-                BlendMode.srcIn,
-              ),
-            ),
-            if (isSelected) ...[
-               SizedBox(width: 6.w),
-              Text(
-                _labelForIndex(index),
-                style: TextStyle(
-                  color: const Color(0xffFFFFFF),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
+    return Padding(
+      padding: EdgeInsets.only(left: 0.sp, right: 0.sp),
+      child: GestureDetector(
+        onTap: () => onTap(index),
+        child: Container(
+          height: 45.h,
+          padding: isSelected
+              ? EdgeInsets.symmetric(horizontal: 20.sp)
+              : EdgeInsets.symmetric(horizontal: 0.sp, vertical: 0.sp),
+          decoration: BoxDecoration(
+            color: isSelected ? Color(0xff363636) : Colors.transparent,
+            borderRadius: BorderRadius.circular(40.r),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              SvgPicture.asset(
+                icon,
+                height: 0.03.sh,
+                width: 0.03.sw,
+                colorFilter: ColorFilter.mode(
+                  isSelected ? Color(0xffFFFFFF) : Color(0xffA8A7A8),
+                  BlendMode.srcIn,
                 ),
               ),
+
+              if (isSelected && index != 2) ...[
+                10.horizontalSpace,
+                Text(
+                  _labelForIndex(index),
+                  style: TextStyle(
+                    color: const Color(0xffFFFFFF),
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
   }
+
   String _labelForIndex(int index) {
     switch (index) {
       case 0:

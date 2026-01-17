@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:readme_blogapp/shared/widgets/bottom_navbar.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -23,8 +24,11 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       extendBody: true,
       body: pages[currentIndex],
-        bottomNavigationBar: BottomNavbar(currentIndex: currentIndex,onTap: (index) => setState(() => currentIndex = index),
-      ),
+        bottomNavigationBar: Padding(
+          padding:  EdgeInsets.symmetric(horizontal: 18.sp,vertical: 18.sp),
+          child: BottomNavbar(currentIndex: currentIndex,onTap: (index) => setState(() => currentIndex = index),
+                ),
+        ),
       );
   }
 }
