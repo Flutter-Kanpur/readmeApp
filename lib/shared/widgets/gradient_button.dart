@@ -14,7 +14,6 @@ class Custom3DButton extends StatelessWidget {
     this.width = double.infinity,
   });
 
-  //To use this just give your custom Height, Width, Text and onTap
 
   @override
   Widget build(BuildContext context) {
