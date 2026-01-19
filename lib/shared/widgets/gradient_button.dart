@@ -57,7 +57,7 @@ class Custom3DButton extends StatelessWidget {
                   begin: Alignment(-1, -1),
                   end: Alignment(0, 1),
                   stops: [-1, 0.2],
-                  colors: [Colors.white.withOpacity(0.35), Colors.transparent],
+                  colors: [Colors.white.withOpacity(0.95), Colors.transparent],
                 ),
               ),
             ),
@@ -86,7 +86,7 @@ class Custom3DButton extends StatelessWidget {
                   end: Alignment.bottomCenter,
                   stops: [-1, 0.2],
 
-                  colors: [Colors.white.withOpacity(0.25), Colors.transparent],
+                  colors: [Colors.white.withOpacity(0.55), Colors.transparent],
                 ),
               ),
             ),
