@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:readme_blogapp/features/home_page/home_screen.dart';
+import 'package:readme_blogapp/features/profile/profile_Screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 Future<void> main() async {
@@ -29,7 +30,7 @@ class MyApp extends StatelessWidget {
             textTheme: GoogleFonts.poppinsTextTheme(),
             colorScheme: .fromSeed(seedColor: Colors.deepPurple),
           ),
-          home: HomeScreen(),
+          home: ProfileScreen(),
         );
       },
     );
