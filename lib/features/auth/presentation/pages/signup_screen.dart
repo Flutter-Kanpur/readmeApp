@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:readme_blogapp/core/utils/app_colors.dart';
+import 'package:readme_blogapp/core/utils/text_style.dart';
 import '../../../../shared/widgets/gradient_background.dart';
 import '../../../../shared/widgets/gradient_button.dart';
 import '../../../../shared/widgets/textfield.dart';
@@ -61,24 +63,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
         SizedBox(height: 280.h),
         Text(
           "Create your account",
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 24,
-            fontWeight: FontWeight.w700,
-          ),
+          style: textStyle_24BoldBlack(),
         ),
-        SizedBox(height: 15.h),
+      15.verticalSpace,
         Text(
           "Join Flutter Kanpur and be part of the\ncommunity.",
           textAlign: TextAlign.center,
-          style: TextStyle(
-            color: Color(0xFF6D6D6D),
-            fontSize: 16,
-            height: 1.5,
-            fontWeight: FontWeight.w400,
-          ),
+          style: textStyle_16RegularGrey()
         ),
-        SizedBox(height: 22.h),
+        22.verticalSpace,
       ],
     );
   }
@@ -103,7 +96,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       text: "Username",
       controller: _usernameController,
       isPassword: false,
-      hintColor: Color(0xFFD6D6D6),
+      hintColor: AppColors.subtitles,
       hintFontSize: 16,
     );
   }
@@ -114,7 +107,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       controller: _emailController,
       keyboardType: TextInputType.emailAddress,
       isPassword: false,
-      hintColor: Color(0xFFD6D6D6),
+      hintColor: AppColors.subtitles,
       hintFontSize: 16,
     );
   }
@@ -125,7 +118,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       controller: _passwordController,
       isPassword: true,
       enablePasswordToggle: true,
-      hintColor: Color(0xFFD6D6D6),
+      hintColor: AppColors.subtitles,
       hintFontSize: 16,
     );
   }
@@ -136,7 +129,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       controller: _confirmPasswordController,
       isPassword: true,
       enablePasswordToggle: true,
-      hintColor: Color(0xFFD6D6D6),
+      hintColor: AppColors.subtitles,
       hintFontSize: 16,
     );
   }
@@ -162,11 +155,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
           children: [
             Text(
               "Already have an account? ",
-              style: TextStyle(
-                color: Colors.black,
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
+              style: textStyle_16RegularBlack()
             ),
             GestureDetector(
               onTap: () {
@@ -174,11 +163,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               },
               child: Text(
                 "Log in",
-                style: TextStyle(
-                  color: const Color(0xff4A90E2),
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: textStyle_16RegularLinkBlue()
               ),
             ),
           ],

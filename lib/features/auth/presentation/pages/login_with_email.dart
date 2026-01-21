@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:readme_blogapp/core/utils/text_style.dart';
 import '../../../../shared/widgets/gradient_background.dart';
 import '../../../../shared/widgets/gradient_button.dart';
 import '../../../../shared/widgets/textfield.dart';
@@ -61,17 +63,13 @@ class _LoginWithEmailState extends State<LoginWithEmail> {
         5.horizontalSpace,
         Text(
           "Welcome back",
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 24,
-            fontWeight: FontWeight.w700,
-          ),
+          style: textStyle_24BoldBlack()
         ),
         SizedBox(height: 12.h),
         Text(
           "Log in to continue where you left off.",
           textAlign: TextAlign.center,
-          style: TextStyle(color: Color(0xFF6D6D6D), fontSize: 16, height: 1.5),
+          style: textStyle_16RegularGrey()
         ),
       ],
     );
@@ -108,11 +106,7 @@ class _LoginWithEmailState extends State<LoginWithEmail> {
         },
         child: Text(
           "Forgot Password?",
-          style: TextStyle(
-            color: const Color(0xff4A90E2),
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-          ),
+          style: textStyle_16RegularLinkBlue()
         ),
       ),
     );
@@ -136,11 +130,7 @@ class _LoginWithEmailState extends State<LoginWithEmail> {
       children: [
         Text(
           "New here? ",
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-          ),
+          style: textStyle_16RegularBlack()
         ),
         GestureDetector(
           onTap: () {
@@ -148,11 +138,7 @@ class _LoginWithEmailState extends State<LoginWithEmail> {
           },
           child: Text(
             "Create an account",
-            style: TextStyle(
-              color: const Color(0xff4A90E2),
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
+            style: textStyle_16RegularLinkBlue()
           ),
         ),
       ],
