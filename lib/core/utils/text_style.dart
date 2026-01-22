@@ -50,6 +50,24 @@ TextStyle textStyle_16RegularWhite() {
     height: 1.0,
   );
 }
+TextStyle textStyle_10White() {
+  return TextStyle(
+    fontFamily: 'ProductSans',
+    fontSize: 10.sp,
+    fontWeight: FontWeight.normal,
+    color: const Color(0xFFFFFFFF),
+    height: 1.0,
+  );
+}
+TextStyle textStyle_36SemiBoldWhite() {
+  return TextStyle(
+    fontFamily: 'ProductSans',
+    fontSize: 36.sp,
+    fontWeight: FontWeight.w600,
+    color: const Color(0xFFFFFFFF),
+    height: 1.0,
+  );
+}
 
 TextStyle textStyle_16RegularLinkBlue() {
   return TextStyle(

@@ -3,8 +3,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:Readme/core/utils/assets_path.dart';
 import 'package:Readme/core/utils/text_style.dart';
-import 'package:Readme/features/auth/presentation/pages/login_with_email.dart';
-import 'package:Readme/features/auth/presentation/pages/signup_screen.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../shared/widgets/gradient_background.dart';
 import '../../../../shared/widgets/gradient_button.dart';
