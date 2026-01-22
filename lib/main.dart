@@ -1,14 +1,17 @@
 import 'package:Readme/core/router/routes.dart';
+import 'package:Readme/core/secrets/app_secrets.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
   await Supabase.initialize(
-    url: 'https://uktnmjykbyuvfsbtawwg.supabase.co',
-    anonKey: 'sb_publishable_p3fuhjG-r3Iu2AA0Ayak2w_9Ms57rb5',
+    url: AppSecrets.supabaseUrl,
+    anonKey: AppSecrets.supabaseAnonKey,
   );
   runApp(const MyApp());
 }
