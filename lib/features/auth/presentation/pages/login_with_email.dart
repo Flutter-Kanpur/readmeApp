@@ -1,9 +1,8 @@
+import 'package:Readme/features/home_page/presentation/pages/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:Readme/core/utils/text_style.dart';
 import 'package:Readme/features/auth/presentation/pages/signup_screen.dart';
-import 'package:Readme/features/home_page/home_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../shared/widgets/gradient_background.dart';
 import '../../../../shared/widgets/gradient_button.dart';

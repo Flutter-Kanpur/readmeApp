@@ -1,14 +1,13 @@
+import 'package:Readme/features/home_page/presentation/pages/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/text_style.dart';
 import 'package:Readme/features/auth/presentation/pages/login_with_email.dart';
-import 'package:Readme/features/auth/presentation/pages/login_with_google.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../shared/widgets/gradient_background.dart';
 import '../../../../shared/widgets/gradient_button.dart';
 import '../../../../shared/widgets/textfield.dart';
-import '../../../home_page/home_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
