@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:readme_blogapp/core/utils/assets_path.dart';
-import 'package:readme_blogapp/core/utils/text_style.dart';
-import 'package:readme_blogapp/features/auth/presentation/pages/login_with_email.dart';
-import 'package:readme_blogapp/features/auth/presentation/pages/signup_screen.dart';
+import 'package:Readme/core/utils/assets_path.dart';
+import 'package:Readme/core/utils/text_style.dart';
+import 'package:Readme/features/auth/presentation/pages/login_with_email.dart';
+import 'package:Readme/features/auth/presentation/pages/signup_screen.dart';
 import '../../../../shared/widgets/gradient_background.dart';
 import '../../../../shared/widgets/gradient_button.dart';
 

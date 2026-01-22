@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_kanpur_ui_kit/flutter_kanpur_ui_kit.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:readme_blogapp/features/home_page/data/datasource/blog_remote_datasource.dart';
+import 'package:Readme/features/home_page/data/datasource/blog_remote_datasource.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:readme_blogapp/features/home_page/data/repositories/blog_repository_impl.dart';
-import 'package:readme_blogapp/features/home_page/domain/repositories/blog_repository.dart';
-import 'package:readme_blogapp/features/home_page/presentation/widgets/blogs_content.dart';
-import 'package:readme_blogapp/features/home_page/presentation/widgets/tabs_container.dart';
+import 'package:Readme/features/home_page/data/repositories/blog_repository_impl.dart';
+import 'package:Readme/features/home_page/domain/repositories/blog_repository.dart';
+import 'package:Readme/features/home_page/presentation/widgets/blogs_content.dart';
+import 'package:Readme/features/home_page/presentation/widgets/tabs_container.dart';
 
 import '../../../../shared/widgets/gradient_background.dart';
 

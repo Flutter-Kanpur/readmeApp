@@ -1,4 +1,4 @@
-name: readme_blogapp
+name: Readme
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -39,6 +39,8 @@ dependencies:
   google_fonts: ^7.0.2
   flutter_screenutil: ^5.9.3
   supabase_flutter: ^2.12.0
+  flutter_kanpur_ui_kit: ^0.0.5
+  intl: ^0.20.2
 
 dev_dependencies:
   flutter_test:

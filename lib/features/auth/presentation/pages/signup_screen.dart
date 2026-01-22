@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:readme_blogapp/core/utils/app_colors.dart';
-import 'package:readme_blogapp/core/utils/text_style.dart';
-import 'package:readme_blogapp/features/auth/presentation/pages/login_with_email.dart';
-import 'package:readme_blogapp/features/auth/presentation/pages/login_with_google.dart';
+import 'package:Readme/core/utils/app_colors.dart';
+import 'package:Readme/core/utils/text_style.dart';
+import 'package:Readme/features/auth/presentation/pages/login_with_email.dart';
+import 'package:Readme/features/auth/presentation/pages/login_with_google.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../shared/widgets/gradient_background.dart';
 import '../../../../shared/widgets/gradient_button.dart';

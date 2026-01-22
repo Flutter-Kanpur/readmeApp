@@ -1,6 +1,6 @@
 {
-    "name": "readme_blogapp",
-    "short_name": "readme_blogapp",
+    "name": "Readme",
+    "short_name": "Readme",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
