@@ -5,11 +5,12 @@ import 'package:Readme/core/utils/assets_path.dart';
 import 'package:Readme/core/utils/text_style.dart';
 import 'package:Readme/features/auth/presentation/pages/login_with_email.dart';
 import 'package:Readme/features/auth/presentation/pages/signup_screen.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../shared/widgets/gradient_background.dart';
 import '../../../../shared/widgets/gradient_button.dart';
 
-class LoginWithGoogle extends StatelessWidget {
-  const LoginWithGoogle({super.key});
+class WelcomeScreen extends StatelessWidget {
+  const WelcomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -39,10 +40,7 @@ class LoginWithGoogle extends StatelessWidget {
             // Email Button
             _buildSocialButton(
               onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => LoginWithEmail()),
-                );
+                context.go('/signin');
               },
               label: "Sign in with Email",
               svgPath: AssetsPath.phoneIcon,
@@ -67,10 +65,8 @@ class LoginWithGoogle extends StatelessWidget {
             GradientButton(
               text: "Create Account",
               onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => SignUpScreen()),
-                );
+                context.go('/signup');
+
               },
               height: 55.h,
               width: double.infinity,

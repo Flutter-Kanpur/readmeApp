@@ -140,8 +140,7 @@ class _LoginWithEmailState extends State<LoginWithEmail> {
       text: "Login",
       fontSize: 16,
       onTap: () {
-        // Handle login
-        login();
+        Navigator.push(context, MaterialPageRoute(builder: (context)=> HomeScreen()));
       },
       height: 55.h,
       width: double.infinity,

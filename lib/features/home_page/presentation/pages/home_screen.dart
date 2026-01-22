@@ -1,3 +1,4 @@
+import 'package:Readme/core/utils/text_style.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_kanpur_ui_kit/flutter_kanpur_ui_kit.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -38,12 +39,13 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
+          automaticallyImplyLeading: false,
           backgroundColor: Colors.transparent,
           title: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
             child: Text(
               "Readme",
-              style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold),
+              style: textStyle_24BoldBlack(),
             ),
           ),
         ),

@@ -1,7 +1,8 @@
+import 'package:Readme/core/router/routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:Readme/features/auth/presentation/pages/login_with_google.dart';
+import 'package:Readme/features/auth/presentation/pages/welcome_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 Future<void> main() async {
@@ -22,14 +23,14 @@ class MyApp extends StatelessWidget {
       designSize: const Size(375, 812),
       minTextAdapt: true,
       builder: (context, child) {
-        return MaterialApp(
+        return MaterialApp.router(
           debugShowCheckedModeBanner: false,
           title: 'Flutter Demo',
           theme: ThemeData(
             textTheme: GoogleFonts.poppinsTextTheme(),
             colorScheme: .fromSeed(seedColor: Colors.deepPurple),
           ),
-          home: LoginWithGoogle(),
+         routerConfig: AppRouter.router,
         );
       },
     );
