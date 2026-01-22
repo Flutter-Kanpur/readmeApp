@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:readme_blogapp/core/utils/text_style.dart';
+import 'package:readme_blogapp/features/auth/presentation/pages/signup_screen.dart';
+import 'package:readme_blogapp/features/home_page/home_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../shared/widgets/gradient_background.dart';
 import '../../../../shared/widgets/gradient_button.dart';
 import '../../../../shared/widgets/textfield.dart';
@@ -16,6 +19,31 @@ class LoginWithEmail extends StatefulWidget {
 class _LoginWithEmailState extends State<LoginWithEmail> {
   late TextEditingController _emailController;
   late TextEditingController _passwordController;
+  bool loading = false;
+  final supabase = Supabase.instance.client;
+
+  login() async {
+    setState(() {
+      loading = true;
+    });
+    try {
+      final result = await supabase.auth.signInWithPassword(
+        email: _emailController.text,
+        password: _passwordController.text,
+      );
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => HomeScreen()),
+        (context) => false,
+      );
+    } catch (e) {
+      print(e.toString());
+    } finally {
+      setState(() {
+        loading = false;
+      });
+    }
+  }
 
   @override
   void initState() {
@@ -46,7 +74,9 @@ class _LoginWithEmailState extends State<LoginWithEmail> {
             _buildPasswordField(),
             SizedBox(height: 12.h),
             _buildForgotPasswordLink(),
-            SizedBox(height: 20.h),
+            loading
+                ? Center(child: CircularProgressIndicator())
+                : SizedBox(height: 20.h),
             _buildLoginButton(),
             SizedBox(height: 20.h),
             _buildCreateAccountLink(),
@@ -61,15 +91,12 @@ class _LoginWithEmailState extends State<LoginWithEmail> {
     return Column(
       children: [
         5.horizontalSpace,
-        Text(
-          "Welcome back",
-          style: textStyle_24BoldBlack()
-        ),
+        Text("Welcome back", style: textStyle_24BoldBlack()),
         SizedBox(height: 12.h),
         Text(
           "Log in to continue where you left off.",
           textAlign: TextAlign.center,
-          style: textStyle_16RegularGrey()
+          style: textStyle_16RegularGrey(),
         ),
       ],
     );
@@ -90,7 +117,7 @@ class _LoginWithEmailState extends State<LoginWithEmail> {
     return CustomTextField(
       text: "Password",
       hintColor: Color(0xFFD6D6D6),
-      hintFontSize: 16, 
+      hintFontSize: 16,
       controller: _passwordController,
       isPassword: true,
       enablePasswordToggle: true,
@@ -104,10 +131,7 @@ class _LoginWithEmailState extends State<LoginWithEmail> {
         onTap: () {
           // Handle forgot password
         },
-        child: Text(
-          "Forgot Password?",
-          style: textStyle_16RegularLinkBlue()
-        ),
+        child: Text("Forgot Password?", style: textStyle_16RegularLinkBlue()),
       ),
     );
   }
@@ -118,6 +142,7 @@ class _LoginWithEmailState extends State<LoginWithEmail> {
       fontSize: 16,
       onTap: () {
         // Handle login
+        login();
       },
       height: 55.h,
       width: double.infinity,
@@ -128,17 +153,18 @@ class _LoginWithEmailState extends State<LoginWithEmail> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(
-          "New here? ",
-          style: textStyle_16RegularBlack()
-        ),
+        Text("New here? ", style: textStyle_16RegularBlack()),
         GestureDetector(
           onTap: () {
             // Handle navigate to sign up
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => SignUpScreen()),
+            );
           },
           child: Text(
             "Create an account",
-            style: textStyle_16RegularLinkBlue()
+            style: textStyle_16RegularLinkBlue(),
           ),
         ),
       ],

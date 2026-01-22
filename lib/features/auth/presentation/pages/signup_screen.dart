@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:readme_blogapp/core/utils/app_colors.dart';
 import 'package:readme_blogapp/core/utils/text_style.dart';
+import 'package:readme_blogapp/features/auth/presentation/pages/login_with_email.dart';
+import 'package:readme_blogapp/features/auth/presentation/pages/login_with_google.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../shared/widgets/gradient_background.dart';
 import '../../../../shared/widgets/gradient_button.dart';
 import '../../../../shared/widgets/textfield.dart';
+import '../../../home_page/home_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -18,6 +22,31 @@ class _SignUpScreenState extends State<SignUpScreen> {
   late TextEditingController _emailController;
   late TextEditingController _passwordController;
   late TextEditingController _confirmPasswordController;
+  bool loading = false;
+  final supabase = Supabase.instance.client;
+
+  createAccount() async {
+    setState(() {
+      loading = true;
+    });
+    try {
+      final result = await supabase.auth.signUp(
+        email: _emailController.text,
+        password: _passwordController.text,
+      );
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => HomeScreen()),
+        (context) => false,
+      );
+    } catch (e) {
+      print(e.toString());
+    } finally {
+      setState(() {
+        loading = false;
+      });
+    }
+  }
 
   @override
   void initState() {
@@ -61,15 +90,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return Column(
       children: [
         SizedBox(height: 280.h),
-        Text(
-          "Create your account",
-          style: textStyle_24BoldBlack(),
-        ),
-      15.verticalSpace,
+        Text("Create your account", style: textStyle_24BoldBlack()),
+        15.verticalSpace,
         Text(
           "Join Flutter Kanpur and be part of the\ncommunity.",
           textAlign: TextAlign.center,
-          style: textStyle_16RegularGrey()
+          style: textStyle_16RegularGrey(),
         ),
         22.verticalSpace,
       ],
@@ -140,6 +166,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       fontSize: 16,
       onTap: () {
         // Handle account creation
+        createAccount();
       },
       height: 55.h,
       width: double.infinity,
@@ -155,16 +182,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
           children: [
             Text(
               "Already have an account? ",
-              style: textStyle_16RegularBlack()
+              style: textStyle_16RegularBlack(),
             ),
             GestureDetector(
               onTap: () {
                 // Handle navigate to login
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => LoginWithEmail()),
+                );
               },
-              child: Text(
-                "Log in",
-                style: textStyle_16RegularLinkBlue()
-              ),
+              child: Text("Log in", style: textStyle_16RegularLinkBlue()),
             ),
           ],
         ),

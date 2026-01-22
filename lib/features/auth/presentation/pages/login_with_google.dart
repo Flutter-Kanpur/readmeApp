@@ -3,6 +3,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:readme_blogapp/core/utils/assets_path.dart';
 import 'package:readme_blogapp/core/utils/text_style.dart';
+import 'package:readme_blogapp/features/auth/presentation/pages/login_with_email.dart';
+import 'package:readme_blogapp/features/auth/presentation/pages/signup_screen.dart';
 import '../../../../shared/widgets/gradient_background.dart';
 import '../../../../shared/widgets/gradient_button.dart';
 
@@ -17,15 +19,12 @@ class LoginWithGoogle extends StatelessWidget {
         child: Column(
           children: [
             Spacer(flex: 15),
-            Text(
-              "Let's you in",
-              style: textStyle_24BoldBlack()
-            ),
+            Text("Let's you in", style: textStyle_24BoldBlack()),
             SizedBox(height: 12.h),
             Text(
               "Be part of a community that learns\nand builds together.",
               textAlign: TextAlign.center,
-              style: textStyle_16RegularGrey()
+              style: textStyle_16RegularGrey(),
             ),
             Spacer(flex: 1),
 
@@ -39,22 +38,24 @@ class LoginWithGoogle extends StatelessWidget {
             SizedBox(height: 12.h),
             // Email Button
             _buildSocialButton(
-              onTap: () {},
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => LoginWithEmail()),
+                );
+              },
               label: "Sign in with Email",
               svgPath: AssetsPath.phoneIcon,
             ),
 
-          20.verticalSpace,
+            20.verticalSpace,
 
             Row(
               children: [
                 Expanded(child: Divider(color: Colors.grey.withOpacity(0.3))),
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16.w),
-                  child: Text(
-                    "OR",
-                    style: textStyle_14RegularBlack()
-                  ),
+                  child: Text("OR", style: textStyle_14RegularBlack()),
                 ),
                 Expanded(child: Divider(color: Colors.grey.withOpacity(0.3))),
               ],
@@ -65,7 +66,12 @@ class LoginWithGoogle extends StatelessWidget {
             // Create Account Button - takes full width with internal max width constraint
             GradientButton(
               text: "Create Account",
-              onTap: () {},
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => SignUpScreen()),
+                );
+              },
               height: 55.h,
               width: double.infinity,
             ),
