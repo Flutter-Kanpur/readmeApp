@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:Readme/core/utils/text_style.dart';
 import 'package:Readme/features/auth/presentation/pages/signup_screen.dart';
+import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../shared/widgets/gradient_background.dart';
 import '../../../../shared/widgets/gradient_button.dart';
@@ -139,13 +141,24 @@ class _LoginWithEmailState extends State<LoginWithEmail> {
     return GradientButton(
       text: "Login",
       fontSize: 16,
-      onTap: () {
-        Navigator.push(context, MaterialPageRoute(builder: (context)=> HomeScreen()));
+      onTap: () async {
+        try {
+          await supabase.auth.signInWithPassword(
+            email: _emailController.text,
+            password: _passwordController.text,
+          );
+
+          if (!context.mounted) return;
+          context.go('/home');
+        } catch (e) {
+          debugPrint(e.toString());
+        }
       },
       height: 55.h,
       width: double.infinity,
     );
   }
+
 
   Widget _buildCreateAccountLink() {
     return Row(
