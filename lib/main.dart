@@ -32,7 +32,7 @@ class MyApp extends StatelessWidget {
             textTheme: GoogleFonts.poppinsTextTheme(),
             colorScheme: .fromSeed(seedColor: Colors.deepPurple),
           ),
-         routerConfig: AppRouter.router,
+          routerConfig: AppRouter.router,
         );
       },
     );
