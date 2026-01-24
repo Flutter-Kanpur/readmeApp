@@ -1,4 +1,4 @@
-package com.example.readme_blogapp
+package com.flutterkanpur.readme
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class CustomTextField extends StatefulWidget {
-  final String text; // ONLY required
+  final String text;
 
   final TextEditingController? controller;
   final bool isPassword;
@@ -9,6 +9,9 @@ class CustomTextField extends StatefulWidget {
   final TextInputType keyboardType;
   final TextInputAction textInputAction;
   final int maxLines;
+  final Color? hintColor;
+  final double? hintFontSize;
+  final FontWeight hintFontWeight;
 
   const CustomTextField({
     super.key,
@@ -19,6 +22,9 @@ class CustomTextField extends StatefulWidget {
     this.keyboardType = TextInputType.text,
     this.textInputAction = TextInputAction.next,
     this.maxLines = 1,
+    this.hintColor,
+    this.hintFontSize,
+    this.hintFontWeight = FontWeight.w400,
   });
 
   @override
@@ -63,19 +69,24 @@ class _CustomTextFieldState extends State<CustomTextField> {
         decoration: InputDecoration(
           border: InputBorder.none,
           hintText: widget.text,
+          hintStyle: TextStyle(
+            color: widget.hintColor ?? Colors.grey[600],
+            fontSize: widget.hintFontSize ?? 14,
+            fontWeight: widget.hintFontWeight,
+          ),
           suffixIcon: widget.isPassword && widget.enablePasswordToggle
               ? IconButton(
-            icon: Icon(
-              _obscureText
-                  ? Icons.visibility_off_outlined
-                  : Icons.visibility_outlined,
-            ),
-            onPressed: () {
-              setState(() {
-                _obscureText = !_obscureText;
-              });
-            },
-          )
+                  icon: Icon(
+                    _obscureText
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _obscureText = !_obscureText;
+                    });
+                  },
+                )
               : null,
         ),
       ),
