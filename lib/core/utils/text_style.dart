@@ -10,6 +10,15 @@ TextStyle textStyle_16RegularGrey() {
     height: 1.0,
   );
 }
+TextStyle textStyle_24RegularGrey() {
+  return TextStyle(
+    fontFamily: 'ProductSans',
+    fontSize: 24.sp,
+    fontWeight: FontWeight.w600,
+    color: const Color(0xFF6D6D6D),
+    height: 1.0,
+  );
+}
 TextStyle textStyle_14RegularGrey() {
   return TextStyle(
     fontFamily: 'ProductSans',
