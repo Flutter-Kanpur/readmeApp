@@ -19,6 +19,15 @@ TextStyle textStyle_14RegularGrey() {
     height: 1.0,
   );
 }
+TextStyle textStyle_12LightGrey() {
+  return TextStyle(
+    fontFamily: 'ProductSans',
+    fontSize: 12.sp,
+    fontWeight: FontWeight.w300,
+    color: const Color(0xFF6D6D6D),
+    height: 1.2,
+  );
+}
 TextStyle textStyle_12RegularGrey() {
   return TextStyle(
     fontFamily: 'ProductSans',
@@ -118,6 +127,15 @@ TextStyle textStyle_16RegularLinkBlue() {
   return TextStyle(
     fontFamily: 'ProductSans',
     fontSize: 16.sp,
+    fontWeight: FontWeight.w400,
+    color: const Color(0xFF4167F2),
+    height: 1.0,
+  );
+}
+TextStyle textStyle_14RegularLinkBlue() {
+  return TextStyle(
+    fontFamily: 'ProductSans',
+    fontSize: 14.sp,
     fontWeight: FontWeight.w400,
     color: const Color(0xFF4167F2),
     height: 1.0,

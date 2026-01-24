@@ -6,4 +6,5 @@ class AppColors {
   static const Color borderColor=Color(0XFFD1D1D1);
   static const Color linkBlue=Color(0XFF4167F2);
   static const Color black=Color(0XFF000000);
+  static const Color borderGrey=Color(0XFFECECEC);
 }
