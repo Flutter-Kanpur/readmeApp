@@ -37,6 +37,24 @@ TextStyle textStyle_14RegularBlack() {
     height: 1.0,
   );
 }
+TextStyle textStyle_14MediumGreyHintStyle() {
+  return TextStyle(
+    fontFamily: 'ProductSans',
+    fontSize: 14.sp,
+    fontWeight: FontWeight.normal,
+    color: const Color(0xFF6D6D6D),
+    height: 1.0,
+  );
+}
+TextStyle textStyle_14LightBlack() {
+  return TextStyle(
+    fontFamily: 'ProductSans',
+    fontSize: 14.sp,
+    fontWeight: FontWeight.w400,
+    color: const Color(0xFF000000),
+    height: 1.0,
+  );
+}
 TextStyle textStyle_24BoldBlack() {
   return TextStyle(
     fontFamily: 'ProductSans',

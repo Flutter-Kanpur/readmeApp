@@ -255,11 +255,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             ],
             Text(
               label,
-              style: TextStyle(
-                color: Colors.black,
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w600,
-              ),
+              style: textStyle_16RegularBlack()
             ),
           ],
         ),

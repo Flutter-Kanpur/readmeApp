@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../core/utils/app_colors.dart';
+import '../../core/utils/text_style.dart';
+
 class CustomTextField extends StatefulWidget {
   final String text;
 
@@ -69,11 +72,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
         decoration: InputDecoration(
           border: InputBorder.none,
           hintText: widget.text,
-          hintStyle: TextStyle(
-            color: widget.hintColor ?? Colors.grey[600],
-            fontSize: widget.hintFontSize ?? 14,
-            fontWeight: widget.hintFontWeight,
-          ),
+          hintStyle: textStyle_14MediumGreyHintStyle(),
           suffixIcon: widget.isPassword && widget.enablePasswordToggle
               ? IconButton(
                   icon: Icon(

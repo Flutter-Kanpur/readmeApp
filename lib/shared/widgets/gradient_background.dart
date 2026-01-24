@@ -9,22 +9,31 @@ class GradientBackground extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        child: child,
         width: double.infinity,
-        height: MediaQuery.of(context).size.height,
+        height: double.infinity,
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            stops: [0.0, 0.3],
-
             colors: [
-              Color(0xff2373E2).withOpacity(0.35),
-              Color(0xff2373E2).withOpacity(0.00),
+              const Color(0xFF4373E2).withOpacity(0.48),
+              const Color(0xFF4373E2).withOpacity(0.28),
+              const Color(0xFF4373E2).withOpacity(0.15),
+              Colors.white.withOpacity(0.15),
+              Colors.white,
+            ],
+            stops: const [
+              0.0,
+              0.08,
+              0.12,
+              0.20,
+              0.25,
             ],
           ),
         ),
+        child: child,
       ),
     );
   }
 }
+

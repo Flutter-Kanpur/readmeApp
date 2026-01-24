@@ -18,12 +18,12 @@ class LoginWithEmail extends StatefulWidget {
 }
 
 class _LoginWithEmailState extends State<LoginWithEmail> {
-  late TextEditingController _emailController;
-  late TextEditingController _passwordController;
+  TextEditingController _emailController = TextEditingController();
+  TextEditingController _passwordController = TextEditingController();
   bool loading = false;
   final supabase = Supabase.instance.client;
 
-  login() async {
+  void login() async {
     setState(() {
       loading = true;
     });
@@ -46,12 +46,12 @@ class _LoginWithEmailState extends State<LoginWithEmail> {
     }
   }
 
-  @override
-  void initState() {
-    super.initState();
-    _emailController = TextEditingController();
-    _passwordController = TextEditingController();
-  }
+  // @override
+  // void initState() {
+  //   super.initState();
+  //   _emailController = TextEditingController();
+  //   _passwordController = TextEditingController();
+  // }
 
   @override
   void dispose() {
@@ -62,27 +62,31 @@ class _LoginWithEmailState extends State<LoginWithEmail> {
 
   @override
   Widget build(BuildContext context) {
-    return GradientBackground(
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 24.w),
-        child: Column(
-          children: [
-            Spacer(flex: 8),
-            _buildHeader(),
-            SizedBox(height: 32.h),
-            _buildEmailField(),
-            SizedBox(height: 16.h),
-            _buildPasswordField(),
-            SizedBox(height: 12.h),
-            _buildForgotPasswordLink(),
-            loading
-                ? Center(child: CircularProgressIndicator())
-                : SizedBox(height: 20.h),
-            _buildLoginButton(),
-            SizedBox(height: 20.h),
-            _buildCreateAccountLink(),
-            Spacer(flex: 1),
-          ],
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: GradientBackground(
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 24.w),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Spacer(flex: 8),
+              _buildHeader(),
+              SizedBox(height: 32.h),
+              _buildEmailField(),
+              SizedBox(height: 16.h),
+              _buildPasswordField(),
+              SizedBox(height: 12.h),
+              _buildForgotPasswordLink(),
+              loading
+                  ? Center(child: CircularProgressIndicator())
+                  : SizedBox(height: 20.h),
+              _buildLoginButton(),
+              SizedBox(height: 20.h),
+              _buildCreateAccountLink(),
+              Spacer(flex: 1),
+            ],
+          ),
         ),
       ),
     );
@@ -106,7 +110,6 @@ class _LoginWithEmailState extends State<LoginWithEmail> {
   Widget _buildEmailField() {
     return CustomTextField(
       text: "Email Address/Username",
-      hintColor: Color(0xFFD6D6D6),
       hintFontSize: 16,
       controller: _emailController,
       keyboardType: TextInputType.emailAddress,
@@ -117,7 +120,6 @@ class _LoginWithEmailState extends State<LoginWithEmail> {
   Widget _buildPasswordField() {
     return CustomTextField(
       text: "Password",
-      hintColor: Color(0xFFD6D6D6),
       hintFontSize: 16,
       controller: _passwordController,
       isPassword: true,
@@ -139,6 +141,7 @@ class _LoginWithEmailState extends State<LoginWithEmail> {
 
   Widget _buildLoginButton() {
     return GradientButton(
+      loading: loading,
       text: "Login",
       fontSize: 16,
       onTap: () async {

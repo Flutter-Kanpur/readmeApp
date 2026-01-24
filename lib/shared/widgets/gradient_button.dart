@@ -1,3 +1,4 @@
+import 'package:Readme/core/utils/text_style.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -27,6 +28,7 @@ class GradientButton extends StatelessWidget {
 
   /// Optional custom font size for button text
   final double? fontSize;
+  final bool? loading;
 
   const GradientButton({
     super.key,
@@ -35,6 +37,7 @@ class GradientButton extends StatelessWidget {
     this.height = 45, // Default button height
     this.width = double.infinity,
     this.fontSize,
+    this.loading = false,
   });
 
   @override
@@ -136,15 +139,16 @@ class GradientButton extends StatelessWidget {
               /// Centered button label text
               /// Automatically scales based on button height if fontSize is not provided
               Center(
-                child: Text(
-                  text,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: fontSize ?? height * 0.25,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: 0.4,
-                  ),
-                ),
+                child: (loading ?? false)
+                    ? SizedBox(
+                        height: 25.h,
+                        width: 25.w,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 5,
+                        ),
+                      )
+                    : Text(text, style: textStyle_16RegularWhite()),
               ),
             ],
           ),
