@@ -1,4 +1,7 @@
+import 'package:Readme/core/utils/string_extensions.dart';
 import 'package:Readme/core/utils/text_style.dart';
+import 'package:Readme/features/home_page/domain/entities/blog.dart';
+import 'package:Readme/features/home_page/presentation/utils/blog_category_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_kanpur_ui_kit/flutter_kanpur_ui_kit.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -19,10 +22,13 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int bottomNavIndex = 0;
-  int selectedFilterIndex = 0;
-
   late final BlogRepository blogRepository;
+
+  int bottomNavIndex = 0;
+
+  List<Blog> allBlogs = [];
+  List<String> categories = [];
+  String? selectedCategory;
 
   @override
   void initState() {
@@ -31,6 +37,24 @@ class _HomeScreenState extends State<HomeScreen> {
     blogRepository = BlogRepositoryImpl(
       BlogRemoteDatasource(Supabase.instance.client),
     );
+
+    _loadBlogs();
+  }
+
+  Future<void> _loadBlogs() async {
+    final blogs = await blogRepository.getBlogs();
+
+    setState(() {
+      allBlogs = blogs;
+      categories = extractCategories(blogs);
+      selectedCategory = categories.isNotEmpty ? categories.first : null;
+    });
+  }
+
+  List<Blog> get filteredBlogs {
+    if (selectedCategory == null) return allBlogs;
+
+    return allBlogs.where((blog) => blog.category == selectedCategory).toList();
   }
 
   @override
@@ -43,10 +67,7 @@ class _HomeScreenState extends State<HomeScreen> {
           backgroundColor: Colors.transparent,
           title: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: Text(
-              "Readme",
-              style: textStyle_24BoldBlack(),
-            ),
+            child: Text("Readme", style: textStyle_24BoldBlack()),
           ),
         ),
         extendBody: true,
@@ -57,61 +78,38 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         body: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0,vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10),
             child: Column(
-              spacing:  10.h,
+              spacing: 10.h,
               children: [
-                Row(
-                  spacing: 8.w,
-                  children: [
-                    TabsContainer(
-                      text: "For You",
-                      isSelected: selectedFilterIndex == 0,
-                      onTap: () => setState(() => selectedFilterIndex = 0),
-                    ),
-                    TabsContainer(
-                      text: "Flutter",
-                      isSelected: selectedFilterIndex == 1,
-                      onTap: () => setState(() => selectedFilterIndex = 1),
-                    ),
-                    TabsContainer(
-                      text: "UI",
-                      isSelected: selectedFilterIndex == 2,
-                      onTap: () => setState(() => selectedFilterIndex = 2),
-                    ),
-                  ],
+                SizedBox(
+                  height: 36.h,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: categories.length,
+                    separatorBuilder: (_, __) => SizedBox(width: 8.w),
+                    itemBuilder: (context, index) {
+                      final category = categories[index];
+
+                      return TabsContainer(
+                        text: category.smartCategoryCase(),
+                        isSelected: selectedCategory == category,
+                        onTap: () {
+                          setState(() {
+                            selectedCategory = category;
+                          });
+                        },
+                      );
+                    },
+                  ),
                 ),
-                Expanded(child: buildContent()),
+
+                Expanded(child: BlogsContent(blogs: filteredBlogs)),
               ],
             ),
           ),
         ),
       ),
     );
-  }
-
-  Widget buildContent() {
-    switch (selectedFilterIndex) {
-      case 0:
-        return BlogsContent(
-          category: 'for_you',
-          blogRepository: blogRepository,
-        );
-      case 1:
-        return BlogsContent(
-          category: 'flutter',
-          blogRepository: blogRepository,
-        );
-      case 2:
-        return BlogsContent(
-          category: 'ui',
-          blogRepository: blogRepository,
-        );
-      default:
-        return BlogsContent(
-          category: 'for_you',
-          blogRepository: blogRepository,
-        );
-    }
   }
 }

@@ -13,6 +13,8 @@ class BlogModel extends Blog {
   });
 
   factory BlogModel.fromJson(Map<String, dynamic> json) {
+    final profile = json['profiles'];
+
     return BlogModel(
       id: json['blog_id'],
       title: json['title'],
@@ -22,10 +24,9 @@ class BlogModel extends Blog {
       createdAt: DateTime.parse(json['created_at']),
       isPublished: json['is_published'] ?? false,
       author: Author(
-        name: 'Loading…',
-        avatarUrl: null,
+        name: profile?['name'] ?? 'Unknown',
+        avatarUrl: profile?['avatar_url'],
       ),
     );
   }
-
 }
