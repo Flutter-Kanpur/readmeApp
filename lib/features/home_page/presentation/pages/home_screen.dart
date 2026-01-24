@@ -3,7 +3,6 @@ import 'package:Readme/core/utils/text_style.dart';
 import 'package:Readme/features/home_page/domain/entities/blog.dart';
 import 'package:Readme/features/home_page/presentation/utils/blog_category_utils.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_kanpur_ui_kit/flutter_kanpur_ui_kit.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:Readme/features/home_page/data/datasource/blog_remote_datasource.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -23,8 +22,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late final BlogRepository blogRepository;
-
-  int bottomNavIndex = 0;
 
   List<Blog> allBlogs = [];
   List<String> categories = [];
@@ -72,10 +69,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         extendBody: true,
         extendBodyBehindAppBar: true,
-        bottomNavigationBar: BottomNavbar(
-          currentIndex: bottomNavIndex,
-          onTap: (index) => setState(() => bottomNavIndex = index),
-        ),
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10),

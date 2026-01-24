@@ -19,19 +19,20 @@ class BlogCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 10),
-      padding: const EdgeInsets.all(14),
+      padding:  EdgeInsets.all(14.sp),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderColor),
+        border: Border.all(color: AppColors.borderGrey),
         boxShadow: [
           BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
         ],
       ),
       child: Column(
+        spacing: 5.h,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+
           Row(
             children: [
               CircleAvatar(
@@ -46,17 +47,19 @@ class BlogCard extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(blog.author.name, style: textStyle_16BoldBlack()),
+                  Text(blog.author.name, style: textStyle_16BoldBlack().copyWith(height: 1.2,fontSize: 14.sp)),
                   2.verticalSpace,
                   Text(
                     '${DateFormat.yMMMd().format(blog.createdAt)} · ${_readTime(blog.content)} min read',
-                    style: textStyle_12RegularGrey(),
+                    style: textStyle_12LightGrey().copyWith(color: AppColors.subtitles),
                   ),
                 ],
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          Divider(
+            color: AppColors.borderGrey,
+          ),
           Row(
             spacing: 10.w,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -69,22 +72,21 @@ class BlogCard extends StatelessWidget {
                       blog.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: textStyle_16BoldBlack().copyWith(height: 1.2),
+                      style: textStyle_16BoldBlack().copyWith(height: 1.2,fontSize: 14.sp),
                     ),
                     8.verticalSpace,
                     Text(
                       blog.content,
-                      maxLines: 3,
+                      maxLines: 4,
                       overflow: TextOverflow.ellipsis,
-                      style: textStyle_14RegularGrey(),
+                      style: textStyle_12LightGrey(),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 10),
               Container(
-                width: 100,
-                height: 100,
+                width: 130.w,
+                height: 100.h,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(15),
                   color: Colors.grey.shade200,
@@ -94,11 +96,10 @@ class BlogCard extends StatelessWidget {
                     ? Image.network(blog.coverImage!, fit: BoxFit.cover)
                     : Icon(Icons.broken_image),
               ),
-              const SizedBox(width: 10),
             ],
           ),
 
-          const SizedBox(height: 10),
+
           Row(
             children: [
               Container(
@@ -114,7 +115,7 @@ class BlogCard extends StatelessWidget {
                 child: Center(
                   child: Text(
                     '#${blog.category.smartCategoryCase()}',
-                    style: textStyle_14BoldLinkBlue(),
+                    style: textStyle_14RegularLinkBlue().copyWith(fontSize: 12.sp),
                   ),
                 ),
               ),
@@ -124,7 +125,7 @@ class BlogCard extends StatelessWidget {
                 onPressed: () {
                   // navigate to blog detail
                 },
-                child: Text('Read More →', style: textStyle_16BoldLinkBlue()),
+                child: Text('Read More', style: textStyle_14RegularLinkBlue()),
               ),
             ],
           ),
