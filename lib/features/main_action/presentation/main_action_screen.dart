@@ -46,7 +46,8 @@ class _MainActionScreenState extends State<MainActionScreen> {
     return Scaffold(
       extendBody: true,
       body: widget.child,
-      bottomNavigationBar: BottomNavbar(
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButton: GlassBottomNavbar(
         currentIndex: _getCurrentIndex(context),
         onTap: (index) => _onItemTapped(index, context),
       ),

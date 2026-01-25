@@ -226,10 +226,10 @@ packages:
     dependency: "direct main"
     description:
       name: flutter_kanpur_ui_kit
-      sha256: "77895f333ed80f8ff2c55caa85e1ab4475573e6eb9c7f6a3eac6dc784b618b86"
+      sha256: da5d272e14186639cf69d9f241abb7830048acf0aa0d7cbb4efb9024b4d00829
       url: "https://pub.dev"
     source: hosted
-    version: "0.0.8"
+    version: "0.0.10"
   flutter_lints:
     dependency: "direct dev"
     description:

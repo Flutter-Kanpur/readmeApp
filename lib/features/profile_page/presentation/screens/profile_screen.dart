@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_kanpur_ui_kit/flutter_kanpur_ui_kit.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../domain/entities/story.dart';
 import '../widgets/stat_item.dart';
@@ -125,24 +127,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildEditButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 48.h,
-      child: ElevatedButton(
-        onPressed: () {
-          Navigator.of(context).push(MaterialPageRoute(builder: (context) => const EditProfileScreen()));
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF0D1B2A),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25.r)),
-          elevation: 0,
-        ),
-        child: Text(
-          'Edit Profile',
-          style: TextStyle(color: Colors.white, fontSize: 14.sp),
-        ),
-      ),
-    );
+    return GradientButton(text: "Edit Profile", onTap: (){
+      context.go("/edit_profile");
+    });
   }
 
   Widget _buildStatsRow() {

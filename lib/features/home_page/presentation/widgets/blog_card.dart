@@ -2,6 +2,7 @@ import 'package:Readme/core/utils/string_extensions.dart';
 import 'package:Readme/core/utils/text_style.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/utils/app_colors.dart';
 import '../../domain/entities/blog.dart';
@@ -18,17 +19,21 @@ class BlogCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding:  EdgeInsets.all(14.sp),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderGrey),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
-        ],
-      ),
-      child: Column(
+    return GestureDetector(
+      onTap: () {
+        context.push('/blog/${blog.id}', extra: blog);
+      },
+      child: Container(
+        padding:  EdgeInsets.all(14.sp),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.borderGrey),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
+          ],
+        ),
+        child: Column(
         spacing: 5.h,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -123,7 +128,7 @@ class BlogCard extends StatelessWidget {
               const Spacer(),
               TextButton(
                 onPressed: () {
-                  // navigate to blog detail
+                  context.push('/blog/${blog.id}', extra: blog);
                 },
                 child: Text('Read More', style: textStyle_14RegularLinkBlue()),
               ),
@@ -131,6 +136,7 @@ class BlogCard extends StatelessWidget {
           ),
         ],
       ),
+    ),
     );
   }
 }
