@@ -203,16 +203,11 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
         controller: _controller,
         focusNode: _focusNode,
       ),
-
-
-
-
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Column(
             children: [
-
               _topBar(),
               const Divider(),
               _titleBar(),
