@@ -46,7 +46,7 @@ class AppRouter{
       GoRoute(
         path: '/create',
         name: 'create',
-        builder: (context, state) => const CreateScreen(),
+        builder: (context, state) => const CreateBlogScreen(),
       ),
       // Blog Detail route outside ShellRoute to hide bottom nav bar
       GoRoute(
@@ -84,11 +84,6 @@ class AppRouter{
             builder: (context, state) => const ProfileScreen(),
           ),
         ],
-      ),
-      GoRoute(
-        path: '/create',
-        name: 'create',
-        builder: (context, state) => const CreateBlogScreen(),
       ),
     ],
   );

@@ -49,8 +49,8 @@ dependencies:
   flutter_html: ^3.0.0
   dart_quill_delta: ^10.8.3
   flutter_quill: ^11.5.0
-#  flutter_quill_extensions: ^11.0.0
-#  vsc_quill_delta_to_html: ^1.0.5
+  flutter_quill_extensions: ^11.0.0
+  vsc_quill_delta_to_html: ^1.0.5
 
 dev_dependencies:
   flutter_test:

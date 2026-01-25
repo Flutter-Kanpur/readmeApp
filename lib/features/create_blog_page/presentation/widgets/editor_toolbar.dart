@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
+import 'package:image_picker/image_picker.dart';
 
 class EditorToolbar extends StatelessWidget {
   final quill.QuillController controller;
@@ -28,11 +29,9 @@ class EditorToolbar extends StatelessWidget {
               _formatBtn(Icons.format_list_numbered, quill.Attribute.ol),
               _formatBtn(Icons.format_quote, quill.Attribute.blockQuote),
               _formatBtn(Icons.code, quill.Attribute.codeBlock),
-
-              // ✅ IMAGE BUTTON (SAFE)
               IconButton(
                 icon: const Icon(Icons.image),
-                onPressed: _insertImage,
+                onPressed: _insertLocalImage,
               ),
             ],
           ),
@@ -48,26 +47,31 @@ class EditorToolbar extends StatelessWidget {
     );
   }
 
-  // --------------------------------------------------
-  // ✅ SAFE IMAGE INSERT (NO ASYNC, NO POST-FRAME)
-  // --------------------------------------------------
-  void _insertImage() {
-    const imageUrl = 'https://picsum.photos/600/300';
+  /// ✅ Insert image locally (NO upload here)
+  void _insertLocalImage() async {
+    final picker = ImagePicker();
+    final XFile? picked =
+    await picker.pickImage(source: ImageSource.gallery);
 
-    // Keep editor focused
+    if (picked == null) return;
+
     focusNode.requestFocus();
 
-    final selection = controller.selection;
-
-    final index = (selection.isValid && selection.baseOffset >= 0)
-        ? selection.baseOffset
+    final index = controller.selection.baseOffset >= 0
+        ? controller.selection.baseOffset
         : controller.document.length;
 
     controller.replaceText(
       index,
       0,
-      quill.BlockEmbed.image(imageUrl),
+      quill.BlockEmbed.image(picked.path),
       TextSelection.collapsed(offset: index + 1),
+    );
+    controller.replaceText(
+      index + 1,
+      0,
+      '\n',
+      TextSelection.collapsed(offset: index + 2),
     );
   }
 }

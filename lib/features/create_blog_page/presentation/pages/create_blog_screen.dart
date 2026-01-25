@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/text_style.dart';
@@ -6,6 +7,7 @@ import 'package:Readme/features/create_blog_page/presentation/widgets/editor_too
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_quill/quill_delta.dart';
+import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -19,17 +21,17 @@ class CreateBlogScreen extends StatefulWidget {
 }
 
 class _CreateBlogScreenState extends State<CreateBlogScreen> {
-  static const String _userNameKey = 'user_name';
-  static const String _userImageKey = 'user_profile_pic';
+  static const _draftTitleKey = 'draft_title';
+  static const _draftContentKey = 'draft_content';
+  static const _userNameKey = 'user_name';
+  static const _userImageKey = 'user_profile_pic';
+
   late quill.QuillController _controller;
   final FocusNode _focusNode = FocusNode();
   final ScrollController _scrollController = ScrollController();
   final TextEditingController titleController = TextEditingController();
 
   final supabase = Supabase.instance.client;
-
-  static const String _draftTitleKey = 'draft_title';
-  static const String _draftContentKey = 'draft_content';
 
   @override
   void initState() {
@@ -50,13 +52,10 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
   // ================== LOAD DRAFT ==================
   Future<void> _loadDraft() async {
     final prefs = await SharedPreferences.getInstance();
-
     final savedTitle = prefs.getString(_draftTitleKey);
     final savedContent = prefs.getString(_draftContentKey);
 
-    if (savedTitle != null) {
-      titleController.text = savedTitle;
-    }
+    if (savedTitle != null) titleController.text = savedTitle;
 
     if (savedContent != null) {
       final delta = Delta.fromJson(jsonDecode(savedContent));
@@ -67,34 +66,24 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
       setState(() {});
     }
   }
+
+  // ================== AUTHOR ==================
   Future<Map<String, String?>> _getCachedUser() async {
     final prefs = await SharedPreferences.getInstance();
-
-    final name = prefs.getString(_userNameKey);
-    final image = prefs.getString(_userImageKey);
-    debugPrint("Cached user name: $name");
-    debugPrint("Cached user image: $image");
-
-
     return {
-      'name': name,
-      'image': image,
+      'name': prefs.getString(_userNameKey),
+      'image': prefs.getString(_userImageKey),
     };
   }
-
-
 
   // ================== SAVE DRAFT ==================
   Future<void> _saveDraft() async {
     final prefs = await SharedPreferences.getInstance();
-
-    final title = titleController.text.trim();
-    final contentJson = jsonEncode(
-      _controller.document.toDelta().toJson(),
+    await prefs.setString(_draftTitleKey, titleController.text.trim());
+    await prefs.setString(
+      _draftContentKey,
+      jsonEncode(_controller.document.toDelta().toJson()),
     );
-
-    await prefs.setString(_draftTitleKey, title);
-    await prefs.setString(_draftContentKey, contentJson);
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Draft saved locally")),
@@ -108,10 +97,59 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
     await prefs.remove(_draftContentKey);
   }
 
-  // ================== PUBLISH BLOG ==================
+  // ================== UPLOAD IMAGES ON PUBLISH ==================
+  Future<Map<String, dynamic>> _extractImagesWithPlaceholders(
+      List<dynamic> deltaOps) async {
+
+    final List<String> imagePaths = [];
+    final List<dynamic> cleanedOps = [];
+    int imageIndex = 0;
+
+    for (final op in deltaOps) {
+      // IMAGE OP
+      if (op is Map &&
+          op['insert'] is Map &&
+          op['insert']['image'] is String) {
+
+        final imageValue = op['insert']['image'] as String;
+
+        if (!imageValue.startsWith('http')) {
+          final file = File(imageValue);
+          final bytes = await file.readAsBytes();
+
+          final fileName =
+              'blogs/${DateTime.now().millisecondsSinceEpoch}.jpg';
+
+          await supabase.storage
+              .from('blog_images')
+              .uploadBinary(fileName, bytes);
+
+          imagePaths.add(fileName);
+
+          // ✅ INSERT PLACEHOLDER IN CONTENT
+          cleanedOps.add({
+            'insert': '[[IMAGE_$imageIndex]]\n',
+          });
+
+          imageIndex++;
+        }
+        continue;
+      }
+
+      cleanedOps.add(op);
+    }
+
+    return {
+      'content': cleanedOps,
+      'image_paths': imagePaths,
+    };
+  }
+
+
+
+  // ================== PUBLISH ==================
   Future<void> _publishBlog() async {
     final title = titleController.text.trim();
-
     if (title.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Title cannot be empty")),
@@ -119,12 +157,15 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
       return;
     }
 
-    final contentJson = _controller.document.toDelta().toJson();
-
     try {
+      final rawDelta = _controller.document.toDelta().toJson();
+      final result = await _extractImagesWithPlaceholders(rawDelta);
+
+
       await supabase.from('blogs').insert({
         'title': title,
-        'content': contentJson,
+        'content': jsonEncode(result['content']),
+        'image_paths': result['image_paths'],
         'author_id': supabase.auth.currentUser!.id,
         'is_published': true,
       });
@@ -143,9 +184,11 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
     }
   }
 
+  // ================== UI ==================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       bottomSheet: EditorToolbar(
         controller: _controller,
         focusNode: _focusNode,
@@ -160,12 +203,17 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
               _titleBar(),
               _authorBlock(),
               Expanded(
-                child: quill.QuillEditor(
-                  controller: _controller,
-                  focusNode: _focusNode,
-                  scrollController: _scrollController,
-                  config: const quill.QuillEditorConfig(
-                    placeholder: 'Start writing your blog...',
+                child: Padding(
+                  padding:  EdgeInsets.only(bottom: 100.sp),
+                  child: quill.QuillEditor(
+                    controller: _controller,
+                    focusNode: _focusNode,
+                    scrollController: _scrollController,
+                    config: quill.QuillEditorConfig(
+                      placeholder: 'Start writing your blog...',
+                      embedBuilders:
+                      FlutterQuillEmbeds.editorBuilders(),
+                    ),
                   ),
                 ),
               ),
@@ -176,14 +224,13 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
     );
   }
 
-  // ================== TOP BAR ==================
   Widget _topBar() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         IconButton(
           icon: const Icon(Icons.close),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/home'),
         ),
         Row(
           spacing: 8.sp,
@@ -207,9 +254,8 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
                 child: Center(
                   child: Text(
                     "Publish",
-                    style: textStyle_16RegularWhite().copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: textStyle_16RegularWhite()
+                        .copyWith(fontWeight: FontWeight.w700),
                   ),
                 ),
               ),
@@ -220,7 +266,6 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
     );
   }
 
-  // ================== TITLE ==================
   Widget _titleBar() {
     return TextField(
       controller: titleController,
@@ -236,45 +281,8 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
     return FutureBuilder<Map<String, String?>>(
       future: _getCachedUser(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Row(
-              children: const [
-                SizedBox(
-                  height: 32,
-                  width: 32,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-                SizedBox(width: 12),
-                Text("Loading author..."),
-              ],
-            ),
-          );
-        }
-
-        if (!snapshot.hasData || snapshot.data!['name'] == null) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Row(
-              children: const [
-                CircleAvatar(
-                  radius: 18,
-                  child: Icon(Icons.person),
-                ),
-                SizedBox(width: 12),
-                Text(
-                  "Unknown author",
-                  style: TextStyle(color: Colors.grey),
-                ),
-              ],
-            ),
-          );
-        }
-
-
-        final name = snapshot.data!['name']!;
-        final imageUrl = snapshot.data!['image'];
+        final name = snapshot.data?['name'];
+        final imageUrl = snapshot.data?['image'];
 
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
@@ -282,33 +290,20 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
             children: [
               CircleAvatar(
                 radius: 18,
-                backgroundColor: Colors.grey.shade300,
                 backgroundImage:
                 imageUrl != null ? NetworkImage(imageUrl) : null,
                 child: imageUrl == null
-                    ? const Icon(Icons.person, size: 18)
+                    ? const Icon(Icons.person)
                     : null,
               ),
               const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: textStyle_14RegularBlack(),
-                  ),
-                  Text(
-                    "Writing as Editor",
-                    style: textStyle_12RegularGrey(),
-                  ),
-                ],
-              ),
+              Text(name ?? "Unknown author"),
             ],
           ),
         );
       },
     );
   }
-
-
 }
+
+
