@@ -2,12 +2,15 @@ import 'package:Readme/features/auth/presentation/pages/login_with_email.dart';
 import 'package:Readme/features/auth/presentation/pages/welcome_screen.dart';
 import 'package:Readme/features/auth/presentation/pages/signup_screen.dart';
 import 'package:Readme/features/home_page/presentation/pages/home_screen.dart';
+import 'package:Readme/features/profile_page/presentation/screens/edit_profile_screen.dart';
 import 'package:Readme/features/profile_page/presentation/screens/profile_screen.dart';
 import 'package:Readme/features/splash/presentation/pages/splash_screen.dart';
 import 'package:Readme/features/main_action/presentation/main_action_screen.dart';
 import 'package:Readme/features/search/presentation/pages/search_screen.dart';
 import 'package:Readme/features/create/presentation/pages/create_screen.dart';
 import 'package:Readme/features/trending/presentation/pages/trending_screen.dart';
+import 'package:Readme/features/blog_detail/presentation/pages/blog_detail_screen.dart';
+import 'package:Readme/features/home_page/domain/entities/blog.dart';
 import 'package:go_router/go_router.dart';
 
 class AppRouter{
@@ -34,6 +37,26 @@ class AppRouter{
         name: 'signup',
         builder: (context, state) => const SignUpScreen(),
       ),
+      // Edit Profile route outside ShellRoute to hide bottom nav bar
+      GoRoute(
+        path: '/edit_profile',
+        name: 'edit_profile',
+        builder: (context, state) => const EditProfileScreen(),
+      ),
+      GoRoute(
+        path: '/create',
+        name: 'create',
+        builder: (context, state) => const CreateScreen(),
+      ),
+      // Blog Detail route outside ShellRoute to hide bottom nav bar
+      GoRoute(
+        path: '/blog/:id',
+        name: 'blog_detail',
+        builder: (context, state) {
+          final blog = state.extra as Blog;
+          return BlogDetailScreen(blog: blog);
+        },
+      ),
       // ShellRoute for bottom navigation bar
       ShellRoute(
         builder: (context, state, child) {
@@ -50,11 +73,11 @@ class AppRouter{
             name: 'search',
             builder: (context, state) => const SearchScreen(),
           ),
-          GoRoute(
-            path: '/create',
-            name: 'create',
-            builder: (context, state) => const CreateScreen(),
-          ),
+          // GoRoute(
+          //   path: '/create',
+          //   name: 'create',
+          //   builder: (context, state) => const CreateScreen(),
+          // ),
           GoRoute(
             path: '/trending',
             name: 'trending',

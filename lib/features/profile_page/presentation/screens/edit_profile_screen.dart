@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/custom_text_field.dart';
@@ -98,6 +99,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // appBar: _buildHeader(),
       backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
@@ -128,24 +130,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Widget _buildHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Transform.translate(
-          offset: Offset(-20.w, 0),
-          child: IconButton(
-            onPressed: () => Navigator.of(context).pop(),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-            icon: const Icon(Icons.chevron_left, size: 30, color: Colors.blue),
-          ),
-        ),
-        Text(
-          'Edit Profile',
-          style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
-        ),
-        SizedBox(width: 40.w),
-      ],
+    return AppBar(
+      title: Text("Edit Profile"),
     );
   }
 
