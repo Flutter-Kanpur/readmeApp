@@ -4,6 +4,8 @@ import 'package:flutter_kanpur_ui_kit/flutter_kanpur_ui_kit.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../../domain/entities/story.dart';
 import '../widgets/stat_item.dart';
 import '../widgets/story_tile.dart';
@@ -19,17 +21,91 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   XFile? _imageFile;
   final ImagePicker _picker = ImagePicker();
+  final _supabase = Supabase.instance.client;
+  User? _user;
+  Map<String, dynamic>? _profileData;
+  bool _isLoadingProfile = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _user = _supabase.auth.currentUser;
+    _fetchProfile();
+  }
+
+  Future<void> _fetchProfile() async {
+    if (_user == null) return;
+
+    try {
+      final data = await _supabase
+          .from('profiles')
+          .select()
+          .eq('id', _user!.id)
+          .maybeSingle();
+
+      if (mounted) {
+        setState(() {
+          _profileData = data;
+          _isLoadingProfile = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching profile: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingProfile = false;
+        });
+      }
+    }
+  }
 
   final List<Story> myStories = [
-    Story(category: "TECH", tagColor: Colors.green, source: "Flutter Kanpur", title: "State Management", readTime: "5 min read", date: "Oct 12"),
-    Story(category: "UI/UX", tagColor: Colors.purple, source: "Readme App", title: "Designing for Super Apps", readTime: "8 min read", date: "Sep 28"),
-    Story(category: "DEV", tagColor: Colors.orange, source: "Medium", title: "Clean Architecture in Flutter", readTime: "10 min read", date: "Sep 15"),
-    Story(category: "DART", tagColor: Colors.blue, source: "Dart.dev", title: "Mastering Patterns & Records", readTime: "6 min read", date: "Sep 01"),
-    Story(category: "CAREER", tagColor: Colors.red, source: "LinkedIn", title: "Landing your firstJob", readTime: "4 min read", date: "Aug 20"),
+    Story(
+      category: "TECH",
+      tagColor: Colors.green,
+      source: "Flutter Kanpur",
+      title: "State Management",
+      readTime: "5 min read",
+      date: "Oct 12",
+    ),
+    Story(
+      category: "UI/UX",
+      tagColor: Colors.purple,
+      source: "Readme App",
+      title: "Designing for Super Apps",
+      readTime: "8 min read",
+      date: "Sep 28",
+    ),
+    Story(
+      category: "DEV",
+      tagColor: Colors.orange,
+      source: "Medium",
+      title: "Clean Architecture in Flutter",
+      readTime: "10 min read",
+      date: "Sep 15",
+    ),
+    Story(
+      category: "DART",
+      tagColor: Colors.blue,
+      source: "Dart.dev",
+      title: "Mastering Patterns & Records",
+      readTime: "6 min read",
+      date: "Sep 01",
+    ),
+    Story(
+      category: "CAREER",
+      tagColor: Colors.red,
+      source: "LinkedIn",
+      title: "Landing your firstJob",
+      readTime: "4 min read",
+      date: "Aug 20",
+    ),
   ];
 
   Future<void> _pickImage() async {
-    final XFile? selected = await _picker.pickImage(source: ImageSource.gallery);
+    final XFile? selected = await _picker.pickImage(
+      source: ImageSource.gallery,
+    );
     if (selected != null) setState(() => _imageFile = selected);
   }
 
@@ -41,33 +117,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
         backgroundColor: Colors.white,
         extendBody: true,
         body: SafeArea(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Padding(
-              padding: EdgeInsets.only(
-                left: 20.w,
-                right: 20.w,
-                top: 10.h,
-                bottom: 100.h, // Extra padding for bottom nav bar
-              ),
-              child: Column(
-                children: [
-                  _buildHeader(),
-                  SizedBox(height: 25.h),
-                  _buildProfileAvatar(),
-                  SizedBox(height: 15.h),
-                  _buildNameAndBio(),
-                  SizedBox(height: 20.h),
-                  _buildEditButton(),
-                  SizedBox(height: 25.h),
-                  _buildStatsRow(),
-                  SizedBox(height: 25.h),
-                  _buildTabBar(),
-                  _buildTabContent(),
-                ],
-              ),
-            ),
-          ),
+          child: _isLoadingProfile
+              ? const Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      left: 20.w,
+                      right: 20.w,
+                      top: 10.h,
+                      bottom: 100.h, // Extra padding for bottom nav bar
+                    ),
+                    child: Column(
+                      children: [
+                        _buildHeader(),
+                        SizedBox(height: 25.h),
+                        _buildProfileAvatar(),
+                        SizedBox(height: 15.h),
+                        _buildNameAndBio(),
+                        SizedBox(height: 20.h),
+                        _buildEditButton(),
+                        SizedBox(height: 25.h),
+                        _buildStatsRow(),
+                        SizedBox(height: 25.h),
+                        _buildTabBar(),
+                        _buildTabContent(),
+                      ],
+                    ),
+                  ),
+                ),
         ),
       ),
     );
@@ -88,20 +166,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildProfileAvatar() {
+    final String? avatarUrl =
+        _profileData?['avatar_url'] ?? _user?.userMetadata?['avatar_url'];
+
     return Stack(
       alignment: Alignment.bottomRight,
       children: [
         CircleAvatar(
           radius: 60.r,
           backgroundColor: Colors.grey[100],
-          backgroundImage: _imageFile != null ? FileImage(File(_imageFile!.path)) : null,
-          child: _imageFile == null ? Icon(Icons.person, size: 60.r, color: Colors.grey[400]) : null,
+          backgroundImage: _imageFile != null
+              ? FileImage(File(_imageFile!.path))
+              : (avatarUrl != null ? NetworkImage(avatarUrl) : null)
+                    as ImageProvider?,
+          child: (_imageFile == null && avatarUrl == null)
+              ? Icon(Icons.person, size: 60.r, color: Colors.grey[400])
+              : null,
         ),
         GestureDetector(
           onTap: _pickImage,
           child: Container(
             padding: const EdgeInsets.all(8),
-            decoration: const BoxDecoration(color: Color(0xFF2ECC71), shape: BoxShape.circle),
+            decoration: const BoxDecoration(
+              color: Color(0xFF2ECC71),
+              shape: BoxShape.circle,
+            ),
             child: const Icon(Icons.edit, color: Colors.white, size: 16),
           ),
         ),
@@ -110,26 +199,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildNameAndBio() {
+    final String userName =
+        _profileData?['full_name'] ??
+        _profileData?['name'] ??
+        _user?.userMetadata?['full_name'] ??
+        'User';
+    final String bio =
+        _profileData?['bio'] ??
+        'Flutter Developer & Tech Blogger.\nExploring the future of cross-platform apps.';
+
     return Column(
       children: [
         Text(
-          'BadMos',
+          userName,
           style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.bold),
         ),
         SizedBox(height: 8.h),
         Text(
-          'Flutter Developer & Tech Blogger.\nExploring the future of cross-platform apps.',
+          bio,
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 13.sp, color: Colors.grey[600], height: 1.4),
+          style: TextStyle(
+            fontSize: 13.sp,
+            color: Colors.grey[600],
+            height: 1.4,
+          ),
         ),
       ],
     );
   }
 
   Widget _buildEditButton() {
-    return GradientButton(text: "Edit Profile", onTap: (){
-      context.go("/edit_profile");
-    });
+    return GradientButton(
+      text: "Edit Profile",
+      onTap: () {
+        context.go("/edit_profile");
+      },
+    );
   }
 
   Widget _buildStatsRow() {
