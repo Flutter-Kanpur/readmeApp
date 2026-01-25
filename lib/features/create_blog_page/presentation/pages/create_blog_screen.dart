@@ -19,6 +19,8 @@ class CreateBlogScreen extends StatefulWidget {
 }
 
 class _CreateBlogScreenState extends State<CreateBlogScreen> {
+  static const String _userNameKey = 'user_name';
+  static const String _userImageKey = 'user_profile_pic';
   late quill.QuillController _controller;
   final FocusNode _focusNode = FocusNode();
   final ScrollController _scrollController = ScrollController();
@@ -65,6 +67,22 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
       setState(() {});
     }
   }
+  Future<Map<String, String?>> _getCachedUser() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final name = prefs.getString(_userNameKey);
+    final image = prefs.getString(_userImageKey);
+    debugPrint("Cached user name: $name");
+    debugPrint("Cached user image: $image");
+
+
+    return {
+      'name': name,
+      'image': image,
+    };
+  }
+
+
 
   // ================== SAVE DRAFT ==================
   Future<void> _saveDraft() async {
@@ -128,7 +146,7 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      bottomNavigationBar: EditorToolbar(
+      bottomSheet: EditorToolbar(
         controller: _controller,
         focusNode: _focusNode,
       ),
@@ -140,6 +158,7 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
               _topBar(),
               const Divider(),
               _titleBar(),
+              _authorBlock(),
               Expanded(
                 child: quill.QuillEditor(
                   controller: _controller,
@@ -212,5 +231,84 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
       ),
     );
   }
+
+  Widget _authorBlock() {
+    return FutureBuilder<Map<String, String?>>(
+      future: _getCachedUser(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Row(
+              children: const [
+                SizedBox(
+                  height: 32,
+                  width: 32,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                SizedBox(width: 12),
+                Text("Loading author..."),
+              ],
+            ),
+          );
+        }
+
+        if (!snapshot.hasData || snapshot.data!['name'] == null) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Row(
+              children: const [
+                CircleAvatar(
+                  radius: 18,
+                  child: Icon(Icons.person),
+                ),
+                SizedBox(width: 12),
+                Text(
+                  "Unknown author",
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ],
+            ),
+          );
+        }
+
+
+        final name = snapshot.data!['name']!;
+        final imageUrl = snapshot.data!['image'];
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: Colors.grey.shade300,
+                backgroundImage:
+                imageUrl != null ? NetworkImage(imageUrl) : null,
+                child: imageUrl == null
+                    ? const Icon(Icons.person, size: 18)
+                    : null,
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: textStyle_14RegularBlack(),
+                  ),
+                  Text(
+                    "Writing as Editor",
+                    style: textStyle_12RegularGrey(),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
 
 }
