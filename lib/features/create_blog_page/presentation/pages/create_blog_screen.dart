@@ -193,7 +193,7 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
     }
   }
 
-  // ================== UI ==================
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
