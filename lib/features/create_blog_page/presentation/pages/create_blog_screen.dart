@@ -5,6 +5,7 @@ import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/text_style.dart';
 import 'package:Readme/features/create_blog_page/presentation/widgets/editor_toolbar.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_kanpur_ui_kit/flutter_kanpur_ui_kit.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_quill/quill_delta.dart';
 import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
@@ -103,6 +104,7 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
 
     final List<String> imagePaths = [];
     final List<dynamic> cleanedOps = [];
+    String? coverImageUrl;
     int imageIndex = 0;
 
     for (final op in deltaOps) {
@@ -124,11 +126,18 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
               .from('blog_images')
               .uploadBinary(fileName, bytes);
 
+          // ✅ Save path
           imagePaths.add(fileName);
 
-          // ✅ INSERT PLACEHOLDER IN CONTENT
+          // ✅ Set cover image ONLY ONCE (first image)
+          coverImageUrl ??= supabase.storage
+              .from('blog_images')
+              .getPublicUrl(fileName);
+
+
+          // ✅ Insert placeholder to preserve order
           cleanedOps.add({
-            'insert': '[[IMAGE_$imageIndex]]\n',
+            'insert': '[[IMAGE$imageIndex]]\n',
           });
 
           imageIndex++;
@@ -142,6 +151,7 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
     return {
       'content': cleanedOps,
       'image_paths': imagePaths,
+      'cover_image': coverImageUrl, // 👈 NEW
     };
   }
 
@@ -161,15 +171,14 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
       final rawDelta = _controller.document.toDelta().toJson();
       final result = await _extractImagesWithPlaceholders(rawDelta);
 
-
       await supabase.from('blogs').insert({
         'title': title,
         'content': jsonEncode(result['content']),
         'image_paths': result['image_paths'],
+        'cover_image': result['cover_image'], // ✅ HERE
         'author_id': supabase.auth.currentUser!.id,
         'is_published': true,
       });
-
       await _clearDraft();
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -184,12 +193,13 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
     }
   }
 
-  // ================== UI ==================
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: true,
-      bottomSheet: EditorToolbar(
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: EditorToolbar(
         controller: _controller,
         focusNode: _focusNode,
       ),
@@ -251,14 +261,13 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
                 ),
                 height: 40.h,
                 width: 100.w,
-                child: Center(
-                  child: Text(
+                child: GradientButton(
+                  onTap: _publishBlog,
+                  text:
                     "Publish",
-                    style: textStyle_16RegularWhite()
-                        .copyWith(fontWeight: FontWeight.w700),
                   ),
                 ),
-              ),
+
             ),
           ],
         ),
