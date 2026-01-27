@@ -6,7 +6,6 @@ import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 
 
 Future<void> main() async {
@@ -33,7 +32,7 @@ class MyApp extends StatelessWidget {
           title: 'Flutter Demo',
           theme: ThemeData(
             textTheme: GoogleFonts.poppinsTextTheme(),
-            colorScheme: .fromSeed(seedColor: Colors.deepPurple),
+            colorScheme: .fromSeed(seedColor: Colors.white),
           ),
           localizationsDelegates: [
             FlutterQuillLocalizations.delegate,

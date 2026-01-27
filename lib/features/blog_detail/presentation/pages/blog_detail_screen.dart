@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:Readme/core/utils/string_extensions.dart';
 import 'package:Readme/core/utils/text_style.dart';
-import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/features/home_page/domain/entities/blog.dart';
 
 class BlogDetailScreen extends StatelessWidget {

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/services.dart';
 
 import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/text_style.dart';
@@ -85,10 +86,10 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
       _draftContentKey,
       jsonEncode(_controller.document.toDelta().toJson()),
     );
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Draft saved locally")),
-    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text("Draft saved locally")));
   }
 
   // ================== CLEAR DRAFT ==================
@@ -100,8 +101,8 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
 
   // ================== UPLOAD IMAGES ON PUBLISH ==================
   Future<Map<String, dynamic>> _extractImagesWithPlaceholders(
-      List<dynamic> deltaOps) async {
-
+    List<dynamic> deltaOps,
+  ) async {
     final List<String> imagePaths = [];
     final List<dynamic> cleanedOps = [];
     String? coverImageUrl;
@@ -109,18 +110,14 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
 
     for (final op in deltaOps) {
       // IMAGE OP
-      if (op is Map &&
-          op['insert'] is Map &&
-          op['insert']['image'] is String) {
-
+      if (op is Map && op['insert'] is Map && op['insert']['image'] is String) {
         final imageValue = op['insert']['image'] as String;
 
         if (!imageValue.startsWith('http')) {
           final file = File(imageValue);
           final bytes = await file.readAsBytes();
 
-          final fileName =
-              'blogs/${DateTime.now().millisecondsSinceEpoch}.jpg';
+          final fileName = 'blogs/${DateTime.now().millisecondsSinceEpoch}.jpg';
 
           await supabase.storage
               .from('blog_images')
@@ -134,11 +131,8 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
               .from('blog_images')
               .getPublicUrl(fileName);
 
-
           // ✅ Insert placeholder to preserve order
-          cleanedOps.add({
-            'insert': '[[IMAGE$imageIndex]]\n',
-          });
+          cleanedOps.add({'insert': '[[IMAGE$imageIndex]]\n'});
 
           imageIndex++;
         }
@@ -155,15 +149,13 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
     };
   }
 
-
-
   // ================== PUBLISH ==================
   Future<void> _publishBlog() async {
     final title = titleController.text.trim();
     if (title.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Title cannot be empty")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Title cannot be empty")));
       return;
     }
 
@@ -180,6 +172,7 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
         'is_published': true,
       });
       await _clearDraft();
+      if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Blog published successfully")),
@@ -187,12 +180,26 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
 
       context.pop();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
-      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error: $e")));
     }
   }
 
+  void _handleTabIndent(KeyEvent event) {
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.tab) {
+      final index = _controller.selection.baseOffset;
+      if (index < 0) return;
+
+      _controller.replaceText(
+        index,
+        0,
+        '    ', // 4 spaces
+        TextSelection.collapsed(offset: index + 4),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -214,15 +221,18 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
               _authorBlock(),
               Expanded(
                 child: Padding(
-                  padding:  EdgeInsets.only(bottom: 100.sp),
-                  child: quill.QuillEditor(
-                    controller: _controller,
-                    focusNode: _focusNode,
-                    scrollController: _scrollController,
-                    config: quill.QuillEditorConfig(
-                      placeholder: 'Start writing your blog...',
-                      embedBuilders:
-                      FlutterQuillEmbeds.editorBuilders(),
+                  padding: EdgeInsets.only(bottom: 100.sp),
+                  child: KeyboardListener(
+                    focusNode: FocusNode(),
+                    onKeyEvent: _handleTabIndent,
+                    child: quill.QuillEditor(
+                      controller: _controller,
+                      focusNode: _focusNode,
+                      scrollController: _scrollController,
+                      config: quill.QuillEditorConfig(
+                        placeholder: 'Start writing your blog...',
+                        embedBuilders: FlutterQuillEmbeds.editorBuilders(),
+                      ),
                     ),
                   ),
                 ),
@@ -261,13 +271,8 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
                 ),
                 height: 40.h,
                 width: 100.w,
-                child: GradientButton(
-                  onTap: _publishBlog,
-                  text:
-                    "Publish",
-                  ),
-                ),
-
+                child: GradientButton(onTap: _publishBlog, text: "Publish"),
+              ),
             ),
           ],
         ),
@@ -299,11 +304,10 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
             children: [
               CircleAvatar(
                 radius: 18,
-                backgroundImage:
-                imageUrl != null ? NetworkImage(imageUrl) : null,
-                child: imageUrl == null
-                    ? const Icon(Icons.person)
+                backgroundImage: imageUrl != null
+                    ? NetworkImage(imageUrl)
                     : null,
+                child: imageUrl == null ? const Icon(Icons.person) : null,
               ),
               const SizedBox(width: 12),
               Text(name ?? "Unknown author"),
@@ -314,5 +318,3 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
     );
   }
 }
-
-

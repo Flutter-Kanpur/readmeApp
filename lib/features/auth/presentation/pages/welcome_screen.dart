@@ -9,7 +9,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../shared/widgets/gradient_background.dart';
 import '../../../../shared/widgets/gradient_button.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:google_sign_in_platform_interface/google_sign_in_platform_interface.dart';
 import 'package:google_sign_in/src/token_types.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
