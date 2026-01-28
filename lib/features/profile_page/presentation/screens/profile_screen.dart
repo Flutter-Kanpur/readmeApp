@@ -9,7 +9,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../domain/entities/story.dart';
 import '../widgets/stat_item.dart';
 import '../widgets/story_tile.dart';
-import 'edit_profile_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
