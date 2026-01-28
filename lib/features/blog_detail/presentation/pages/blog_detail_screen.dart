@@ -1,4 +1,8 @@
+import 'dart:convert';
+
+import 'package:dart_quill_delta/dart_quill_delta.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -19,6 +23,21 @@ class BlogDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    late final quill.Document document;
+
+    try {
+      final decoded = jsonDecode(blog.content);
+      final delta = Delta.fromJson(decoded);
+      document = quill.Document.fromDelta(delta);
+    } catch (_) {
+      // fallback for old/plain blogs
+      document = quill.Document()..insert(0, blog.content);
+    }
+
+    final quillController = quill.QuillController(
+      document: document,
+      selection: const TextSelection.collapsed(offset: 0),
+    );
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -186,9 +205,14 @@ class BlogDetailScreen extends StatelessWidget {
                             ],
                           ),
                           SizedBox(height: 30.h),
-                          // Article Content
-                          _buildArticleContent(blog.content),
+
+// Article Content (formatted)
+                          quill.QuillEditor.basic(
+                            controller: quillController,
+                          ),
+
                           SizedBox(height: 30.h),
+
                           // Tags Section
                           Wrap(
                             spacing: 8.w,
@@ -260,93 +284,6 @@ class BlogDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildArticleContent(String content) {
-    // Split content into paragraphs
-    final paragraphs = content.split('\n\n').where((p) => p.trim().isNotEmpty).toList();
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: paragraphs.asMap().entries.map((entry) {
-        final index = entry.key;
-        final paragraph = entry.value.trim();
-        
-        // Check if paragraph contains code-like content
-        if (paragraph.contains('//') && paragraph.contains('const') && 
-            (paragraph.contains('Container') || paragraph.contains('Widget'))) {
-          // Render as code block
-          return Padding(
-            padding: EdgeInsets.only(bottom: 20.h),
-            child: Container(
-              width: double.infinity,
-              padding: EdgeInsets.all(16.w),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade800,
-                borderRadius: BorderRadius.circular(12.r),
-              ),
-              child: SelectableText(
-                paragraph,
-                style: TextStyle(
-                  fontSize: 13.sp,
-                  fontFamily: 'monospace',
-                  color: Colors.white,
-                  height: 1.5,
-                ),
-              ),
-            ),
-          );
-        }
-        
-        // Check if it's a numbered section (starts with number and period)
-        final numberedMatch = RegExp(r'^(\d+\.\s+)(.+)$').firstMatch(paragraph);
-        if (numberedMatch != null) {
-          final numberPart = numberedMatch.group(1)!;
-          final textPart = numberedMatch.group(2)!;
-          
-          return Padding(
-            padding: EdgeInsets.only(bottom: 20.h),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  numberPart + textPart.split('\n').first,
-                  style: TextStyle(
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-                if (textPart.contains('\n'))
-                  Padding(
-                    padding: EdgeInsets.only(top: 8.h),
-                    child: Text(
-                      textPart.substring(textPart.indexOf('\n') + 1),
-                      style: TextStyle(
-                        fontSize: 15.sp,
-                        color: Colors.black87,
-                        height: 1.6,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          );
-        }
-        
-        // Regular paragraph
-        return Padding(
-          padding: EdgeInsets.only(bottom: 16.h),
-          child: Text(
-            paragraph,
-            style: TextStyle(
-              fontSize: 15.sp,
-              color: Colors.black87,
-              height: 1.6,
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
 
   Widget _buildTag(String tag) {
     return Container(
