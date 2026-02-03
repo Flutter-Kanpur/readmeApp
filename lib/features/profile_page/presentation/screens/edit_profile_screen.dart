@@ -1,9 +1,13 @@
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../widgets/custom_text_field.dart';
+import '../../../../shared/widgets/gradient_background.dart';
+import '../../../../shared/widgets/textfield.dart';
+import '../../../../shared/widgets/gradient_button.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -16,15 +20,57 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   XFile? _imageFile;
   final ImagePicker _picker = ImagePicker();
   bool _isLoading = false;
+  bool _isLoadingProfile = true;
 
   final supabase = Supabase.instance.client;
+  User? _user;
+  Map<String, dynamic>? _profileData;
 
-  final TextEditingController _fullNameController = TextEditingController(text: 'John Doe');
-  final TextEditingController _usernameController = TextEditingController(text: '@johndoe_dev');
-  final TextEditingController _bioController = TextEditingController(text: 'Tech enthusiast & Flutter developer. Crafting beautiful experiences with Dart! 🚀');
+  final TextEditingController _fullNameController = TextEditingController();
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _bioController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _user = supabase.auth.currentUser;
+    _fetchProfile();
+  }
+
+  Future<void> _fetchProfile() async {
+    if (_user == null) return;
+
+    try {
+      final data = await supabase
+          .from('profiles')
+          .select()
+          .eq('id', _user!.id)
+          .maybeSingle();
+
+      if (mounted && data != null) {
+        setState(() {
+          _profileData = data;
+          _fullNameController.text = data['name'] ?? '';
+          _usernameController.text = data['username'] ?? '';
+          _bioController.text =
+              data['bio'] ?? 'Flutter developer and tech explorer';
+          _isLoadingProfile = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching profile: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingProfile = false;
+        });
+      }
+    }
+  }
 
   Future<void> _pickImage() async {
-    final XFile? selected = await _picker.pickImage(source: ImageSource.gallery);
+    final XFile? selected = await _picker.pickImage(
+      source: ImageSource.gallery,
+    );
     if (selected != null) setState(() => _imageFile = selected);
   }
 
@@ -34,58 +80,124 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final user = supabase.auth.currentUser;
     if (user == null) return null;
 
-    final file = File(_imageFile!.path);
-    final filePath = '${user.id}/avatar.jpg';
+    try {
+      final bytes = await _imageFile!.readAsBytes();
+      final fileExt = _imageFile!.path.split('.').last;
+      final fileName =
+          'profile_${user.id}_${DateTime.now().millisecondsSinceEpoch}.$fileExt';
+      final filePath = 'avatars/$fileName';
 
-    await supabase.storage.from('avatars').upload(filePath, file, fileOptions: const FileOptions(upsert: true));
+      await supabase.storage.from('blog_images').uploadBinary(filePath, bytes);
 
-    final imageUrl = supabase.storage.from('avatars').getPublicUrl(filePath);
+      final imageUrl = supabase.storage
+          .from('blog_images')
+          .getPublicUrl(filePath);
 
-    return imageUrl;
+      return imageUrl;
+    } catch (e) {
+      debugPrint('Error uploading image: $e');
+      return null;
+    }
+  }
+
+  String _generateUsername(String name) {
+    String cleanName = name
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]'), '')
+        .trim();
+
+    if (cleanName.isEmpty) {
+      cleanName = 'user';
+    }
+
+    final random = Random();
+    final randomNumber = 1000 + random.nextInt(9000);
+
+    return '${cleanName}_$randomNumber';
   }
 
   Future<void> _saveProfile() async {
-  debugPrint('========== SAVE PROFILE START ==========');
+    debugPrint('========== SAVE PROFILE START ==========');
 
-  setState(() => _isLoading = true);
-
-  try {
-    final user = supabase.auth.currentUser;
-    debugPrint('👤 Current user: ${user?.id}');
-
-    if (user == null) {
-      debugPrint('❌ No authenticated user');
+    final name = _fullNameController.text.trim();
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Name cannot be empty'),
+          backgroundColor: Colors.red,
+        ),
+      );
       return;
     }
 
-    debugPrint('✍️ Full Name: ${_fullNameController.text}');
-    debugPrint('✍️ Username: ${_usernameController.text}');
-    debugPrint('✍️ Bio: ${_bioController.text}');
+    setState(() => _isLoading = true);
 
-    final imageUrl = await _uploadProfileImage();
-    debugPrint('🖼 Uploaded image URL: $imageUrl');
+    try {
+      final user = supabase.auth.currentUser;
+      debugPrint('👤 Current user: ${user?.id}');
 
-    final response = await supabase
-        .from('profiles')
-        .update({
-          'full_name': _fullNameController.text.trim(),
-          'username': _usernameController.text.trim(),
-          'bio': _bioController.text.trim(),
-          if (imageUrl != null) 'avatar_url': imageUrl,
-        })
-        .eq('id', user.id)
-        .select();
+      if (user == null) {
+        debugPrint('❌ No authenticated user');
+        return;
+      }
 
-    debugPrint('✅ Supabase response: $response');
-  } catch (e, st) {
-    debugPrint('❌ ERROR: $e');
-    debugPrint('📍 STACK TRACE: $st');
-  } finally {
-    setState(() => _isLoading = false);
-    debugPrint('========== SAVE PROFILE END ==========');
+      // Generate username if empty
+      String username = _usernameController.text.trim();
+      if (username.isEmpty) {
+        username = _generateUsername(name);
+        _usernameController.text = username;
+      }
+
+      debugPrint('✍️ Full Name: $name');
+      debugPrint('✍️ Username: $username');
+      debugPrint('✍️ Bio: ${_bioController.text}');
+
+      final imageUrl = await _uploadProfileImage();
+      debugPrint('🖼 Uploaded image URL: $imageUrl');
+
+      final Map<String, dynamic> updates = {
+        'name': name,
+        'username': username,
+        'bio': _bioController.text.trim(),
+      };
+
+      if (imageUrl != null) {
+        updates['avatar_url'] = imageUrl;
+      }
+
+      final response = await supabase
+          .from('profiles')
+          .update(updates)
+          .eq('id', user.id)
+          .select();
+
+      debugPrint('✅ Supabase response: $response');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile updated successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        context.go('/profile');
+      }
+    } catch (e, st) {
+      debugPrint('❌ ERROR: $e');
+      debugPrint('📍 STACK TRACE: $st');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update profile: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      setState(() => _isLoading = false);
+      debugPrint('========== SAVE PROFILE END ==========');
+    }
   }
-}
-
 
   @override
   void dispose() {
@@ -97,6 +209,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+<<<<<<< Updated upstream
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -122,6 +235,60 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ],
             ),
           ),
+=======
+    return GradientBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
+          child: _isLoadingProfile
+              ? const Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 20.w,
+                      vertical: 10.h,
+                    ),
+                    child: Column(
+                      children: [
+                        _buildHeader(),
+                        SizedBox(height: 25.h),
+                        _buildProfileAvatar(),
+                        SizedBox(height: 10.h),
+                        _buildChangePhotoButton(),
+                        SizedBox(height: 30.h),
+                        _buildLabeledField(
+                          label: 'Full Name',
+                          child: CustomTextField(
+                            text: 'Full Name',
+                            controller: _fullNameController,
+                          ),
+                        ),
+                        SizedBox(height: 20.h),
+                        _buildLabeledField(
+                          label: 'Username',
+                          child: CustomTextField(
+                            text: 'Username',
+                            controller: _usernameController,
+                          ),
+                        ),
+                        SizedBox(height: 20.h),
+                        _buildLabeledField(
+                          label: 'Bio',
+                          child: CustomTextField(
+                            text: 'Bio',
+                            controller: _bioController,
+                            maxLines: 3,
+                          ),
+                        ),
+                        SizedBox(height: 40.h),
+                        _buildSaveButton(),
+                        SizedBox(height: 20.h),
+                      ],
+                    ),
+                  ),
+                ),
+>>>>>>> Stashed changes
         ),
       ),
     );
@@ -129,6 +296,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Widget _buildHeader() {
     return Row(
+<<<<<<< Updated upstream
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Transform.translate(
@@ -145,26 +313,54 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
         ),
         SizedBox(width: 40.w),
+=======
+      children: [
+        IconButton(
+          icon: const Icon(Icons.arrow_back_ios, size: 20),
+          onPressed: () => context.go('/profile'),
+          padding: EdgeInsets.zero,
+        ),
+        Expanded(
+          child: Center(
+            child: Text(
+              'Edit Profile',
+              style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ),
+        SizedBox(width: 40.w), // For symmetry
+>>>>>>> Stashed changes
       ],
     );
   }
 
   Widget _buildProfileAvatar() {
+    final String? avatarUrl = _profileData?['avatar_url'];
+
     return Stack(
       alignment: Alignment.bottomRight,
       children: [
         CircleAvatar(
           radius: 60.r,
           backgroundColor: Colors.grey[300],
-          backgroundImage: _imageFile != null ? FileImage(File(_imageFile!.path)) : null,
-          child: _imageFile == null ? Icon(Icons.person, size: 60.r, color: Colors.grey[400]) : null,
+          backgroundImage: _imageFile != null
+              ? FileImage(File(_imageFile!.path))
+              : (avatarUrl != null ? NetworkImage(avatarUrl) : null)
+                    as ImageProvider?,
+          child: (_imageFile == null && avatarUrl == null)
+              ? Icon(Icons.person, size: 60.r, color: Colors.grey[400])
+              : null,
         ),
         GestureDetector(
           onTap: _pickImage,
           child: Container(
-            height: 32,
-            width: 32,
-            decoration: const BoxDecoration(color: Colors.blue, shape: BoxShape.circle),
+            height: 36,
+            width: 36,
+            decoration: BoxDecoration(
+              color: Colors.blue[600],
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 3),
+            ),
             child: const Icon(Icons.camera_alt, color: Colors.white, size: 18),
           ),
         ),
@@ -175,26 +371,47 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Widget _buildChangePhotoButton() {
     return TextButton(
       onPressed: _pickImage,
-      style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+      style: TextButton.styleFrom(
+        padding: EdgeInsets.zero,
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
       child: Text(
         'Change Photo',
-        style: TextStyle(color: Colors.blue, fontSize: 14.sp, fontWeight: FontWeight.w500),
+        style: TextStyle(
+          color: Colors.blue[600],
+          fontSize: 15.sp,
+          fontWeight: FontWeight.w500,
+        ),
       ),
     );
   }
 
-  Widget _buildSaveButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 50,
-      child: ElevatedButton(
-        onPressed: _isLoading ? null : _saveProfile,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.black,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+  Widget _buildLabeledField({required String label, required Widget child}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14.sp,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
         ),
-        child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text('Save Changes', style: TextStyle(color: Colors.white)),
-      ),
+        SizedBox(height: 8.h),
+        child,
+      ],
+    );
+  }
+
+  Widget _buildSaveButton() {
+    return GradientButton(
+      text: 'Save Changes',
+      onTap: _saveProfile,
+      loading: _isLoading,
+      height: 55.h,
+      width: double.infinity,
     );
   }
 }

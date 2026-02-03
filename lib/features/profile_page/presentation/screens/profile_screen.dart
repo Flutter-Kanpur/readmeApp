@@ -5,7 +5,11 @@ import 'package:image_picker/image_picker.dart';
 import '../../domain/entities/story.dart';
 import '../widgets/stat_item.dart';
 import '../widgets/story_tile.dart';
+<<<<<<< Updated upstream
 import 'edit_profile_screen.dart';
+=======
+import '../../../../shared/widgets/gradient_background.dart';
+>>>>>>> Stashed changes
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -33,6 +37,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+<<<<<<< Updated upstream
     return DefaultTabController(
       length: 3,
       child: Scaffold(
@@ -59,6 +64,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
             ),
+=======
+    return GradientBackground(
+      child: DefaultTabController(
+        length: 3,
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          extendBody: true,
+          body: SafeArea(
+            child: _isLoadingProfile
+                ? const Center(child: CircularProgressIndicator())
+                : SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        left: 20.w,
+                        right: 20.w,
+                        top: 10.h,
+                        bottom: 100.h, // Extra padding for bottom nav bar
+                      ),
+                      child: Column(
+                        children: [
+                          _buildHeader(),
+                          SizedBox(height: 25.h),
+                          _buildProfileAvatar(),
+                          SizedBox(height: 15.h),
+                          _buildNameAndBio(),
+                          SizedBox(height: 20.h),
+                          _buildEditButton(),
+                          SizedBox(height: 25.h),
+                          _buildStatsRow(),
+                          SizedBox(height: 25.h),
+                          _buildTabBar(),
+                          _buildTabContent(),
+                        ],
+                      ),
+                    ),
+                  ),
+>>>>>>> Stashed changes
           ),
         ),
       ),
