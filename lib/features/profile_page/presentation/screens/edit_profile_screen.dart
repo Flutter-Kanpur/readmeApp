@@ -47,13 +47,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           .eq('id', _user!.id)
           .maybeSingle();
 
-      if (mounted && data != null) {
+      if (mounted) {
         setState(() {
           _profileData = data;
-          _fullNameController.text = data['name'] ?? '';
-          _usernameController.text = data['username'] ?? '';
+          _fullNameController.text = data?['name'] ?? '';
+          _usernameController.text = data?['username'] ?? '';
           _bioController.text =
-              data['bio'] ?? 'Flutter developer and tech explorer';
+              data?['bio'] ?? 'Flutter developer and tech explorer';
           _isLoadingProfile = false;
         });
       }
@@ -138,6 +138,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
       if (user == null) {
         debugPrint('❌ No authenticated user');
+        if (mounted) setState(() => _isLoading = false);
         return;
       }
 
@@ -209,36 +210,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-<<<<<<< Updated upstream
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
-            child: Column(
-              children: [
-                _buildHeader(),
-                SizedBox(height: 25.h),
-                _buildProfileAvatar(),
-                SizedBox(height: 15.h),
-                // _buildChangePhotoButton(),
-                SizedBox(height: 25.h),
-                CustomTextField(label: 'Full Name', hintText: 'John Doe', controller: _fullNameController),
-                SizedBox(height: 20.h),
-                CustomTextField(label: 'Username', hintText: '@johndoe_dev', controller: _usernameController),
-                SizedBox(height: 20.h),
-                CustomTextField(label: 'Bio', hintText: 'Bio', controller: _bioController, maxLines: 3),
-                SizedBox(height: 30.h),
-                _buildSaveButton(),
-              ],
-            ),
-          ),
-=======
     return GradientBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          leading: IconButton(
+            icon: const Icon(Icons.chevron_left, size: 28, color: Colors.black),
+            onPressed: () => context.go('/profile'),
+            padding: EdgeInsets.zero,
+          ),
+          title: Text(
+            'Edit Profile',
+            style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w600),
+          ),
+          centerTitle: true,
+        ),
         body: SafeArea(
           child: _isLoadingProfile
               ? const Center(child: CircularProgressIndicator())
@@ -251,8 +238,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ),
                     child: Column(
                       children: [
-                        _buildHeader(),
-                        SizedBox(height: 25.h),
                         _buildProfileAvatar(),
                         SizedBox(height: 10.h),
                         _buildChangePhotoButton(),
@@ -260,7 +245,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         _buildLabeledField(
                           label: 'Full Name',
                           child: CustomTextField(
-                            text: 'Full Name',
+                            text: 'John Doe',
                             controller: _fullNameController,
                           ),
                         ),
@@ -268,7 +253,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         _buildLabeledField(
                           label: 'Username',
                           child: CustomTextField(
-                            text: 'Username',
+                            text: '@johndoe_dev',
                             controller: _usernameController,
                           ),
                         ),
@@ -276,9 +261,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         _buildLabeledField(
                           label: 'Bio',
                           child: CustomTextField(
-                            text: 'Bio',
+                            text: 'Tell us about yourself',
                             controller: _bioController,
-                            maxLines: 3,
+                            maxLines: 5,
                           ),
                         ),
                         SizedBox(height: 40.h),
@@ -288,49 +273,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ),
                   ),
                 ),
->>>>>>> Stashed changes
         ),
       ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Row(
-<<<<<<< Updated upstream
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Transform.translate(
-          offset: Offset(-20.w, 0),
-          child: IconButton(
-            onPressed: () => Navigator.of(context).pop(),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-            icon: const Icon(Icons.chevron_left, size: 30, color: Colors.blue),
-          ),
-        ),
-        Text(
-          'Edit Profile',
-          style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
-        ),
-        SizedBox(width: 40.w),
-=======
-      children: [
-        IconButton(
-          icon: const Icon(Icons.arrow_back_ios, size: 20),
-          onPressed: () => context.go('/profile'),
-          padding: EdgeInsets.zero,
-        ),
-        Expanded(
-          child: Center(
-            child: Text(
-              'Edit Profile',
-              style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w600),
-            ),
-          ),
-        ),
-        SizedBox(width: 40.w), // For symmetry
->>>>>>> Stashed changes
-      ],
     );
   }
 

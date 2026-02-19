@@ -1,4 +1,5 @@
 import '../../domain/entities/blog.dart';
+import '../../../../core/utils/quill_content_parser.dart';
 
 class BlogModel extends Blog {
   const BlogModel({
@@ -14,11 +15,13 @@ class BlogModel extends Blog {
 
   factory BlogModel.fromJson(Map<String, dynamic> json) {
     final profile = json['profiles'];
+    final rawContent = json['content'];
+    final content = parseQuillContent(rawContent);
 
     return BlogModel(
       id: json['blog_id'],
       title: json['title'],
-      content: json['content'],
+      content: content,
       coverImage: json['cover_image'],
       category: json['category'],
       createdAt: DateTime.parse(json['created_at']),

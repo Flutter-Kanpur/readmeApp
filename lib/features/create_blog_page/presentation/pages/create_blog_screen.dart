@@ -12,6 +12,7 @@ import 'package:flutter_quill/quill_delta.dart';
 import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -34,6 +35,8 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
   final TextEditingController titleController = TextEditingController();
 
   final supabase = Supabase.instance.client;
+  final ImagePicker _imagePicker = ImagePicker();
+  XFile? _coverImageFile;
 
   @override
   void initState() {
@@ -99,6 +102,16 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
     await prefs.remove(_draftContentKey);
   }
 
+  // ================== COVER IMAGE ==================
+  Future<void> _pickCoverImage() async {
+    final XFile? picked = await _imagePicker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1200,
+      imageQuality: 85,
+    );
+    if (picked != null && mounted) setState(() => _coverImageFile = picked);
+  }
+
   // ================== UPLOAD IMAGES ON PUBLISH ==================
   Future<Map<String, dynamic>> _extractImagesWithPlaceholders(
     List<dynamic> deltaOps,
@@ -160,14 +173,24 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
     }
 
     try {
+      String? coverImageUrl;
+      if (_coverImageFile != null) {
+        final bytes = await _coverImageFile!.readAsBytes();
+        final fileExt = _coverImageFile!.path.split('.').last;
+        final fileName = 'covers/${DateTime.now().millisecondsSinceEpoch}.$fileExt';
+        await supabase.storage.from('blog_images').uploadBinary(fileName, bytes);
+        coverImageUrl = supabase.storage.from('blog_images').getPublicUrl(fileName);
+      }
+
       final rawDelta = _controller.document.toDelta().toJson();
       final result = await _extractImagesWithPlaceholders(rawDelta);
+      coverImageUrl ??= result['cover_image'] as String?;
 
       await supabase.from('blogs').insert({
         'title': title,
         'content': jsonEncode(result['content']),
         'image_paths': result['image_paths'],
-        'cover_image': result['cover_image'], // ✅ HERE
+        'cover_image': coverImageUrl,
         'author_id': supabase.auth.currentUser!.id,
         'is_published': true,
       });
@@ -217,6 +240,7 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
             children: [
               _topBar(),
               const Divider(),
+              _coverImageBlock(),
               _titleBar(),
               _authorBlock(),
               Expanded(
@@ -277,6 +301,60 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
           ],
         ),
       ],
+    );
+  }
+
+  Widget _coverImageBlock() {
+    return Padding(
+      padding: EdgeInsets.only(bottom: 12.h),
+      child: GestureDetector(
+        onTap: _pickCoverImage,
+        child: Container(
+          width: double.infinity,
+          height: 180.h,
+          decoration: BoxDecoration(
+            color: Colors.grey.shade200,
+            borderRadius: BorderRadius.circular(12.r),
+            border: Border.all(color: Colors.grey.shade400, width: 1),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: _coverImageFile != null
+              ? Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.file(
+                      File(_coverImageFile!.path),
+                      fit: BoxFit.cover,
+                    ),
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Material(
+                        color: Colors.black54,
+                        shape: const CircleBorder(),
+                        child: IconButton(
+                          icon: const Icon(Icons.close, color: Colors.white, size: 20),
+                          onPressed: () => setState(() => _coverImageFile = null),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              : Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.add_photo_alternate_outlined, size: 48.sp, color: Colors.grey.shade600),
+                    SizedBox(height: 8.h),
+                    Text(
+                      'Add cover image',
+                      style: textStyle_14RegularGrey().copyWith(color: Colors.grey.shade600),
+                    ),
+                  ],
+                ),
+        ),
+      ),
     );
   }
 

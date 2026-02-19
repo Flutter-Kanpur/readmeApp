@@ -8,6 +8,7 @@ import 'package:Readme/features/home_page/data/datasource/blog_remote_datasource
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:Readme/features/home_page/data/repositories/blog_repository_impl.dart';
 import 'package:Readme/features/home_page/domain/repositories/blog_repository.dart';
+import 'package:Readme/features/home_page/presentation/widgets/blog_card_shimmer.dart';
 import 'package:Readme/features/home_page/presentation/widgets/blogs_content.dart';
 import 'package:Readme/features/home_page/presentation/widgets/tabs_container.dart';
 
@@ -26,6 +27,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Blog> allBlogs = [];
   List<String> categories = [];
   String? selectedCategory;
+  bool _isLoadingBlogs = true;
 
   @override
   void initState() {
@@ -39,12 +41,17 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadBlogs() async {
+    if (!mounted) return;
+    setState(() => _isLoadingBlogs = true);
+
     final blogs = await blogRepository.getBlogs();
 
+    if (!mounted) return;
     setState(() {
       allBlogs = blogs;
       categories = extractCategories(blogs);
       selectedCategory = categories.isNotEmpty ? categories.first : null;
+      _isLoadingBlogs = false;
     });
   }
 
@@ -97,7 +104,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
 
-                Expanded(child: BlogsContent(blogs: filteredBlogs)),
+                Expanded(
+                  child: _isLoadingBlogs
+                      ? ListView.separated(
+                          padding: const EdgeInsets.only(bottom: 80),
+                          itemCount: 5,
+                          separatorBuilder: (_, __) => SizedBox(height: 16.h),
+                          itemBuilder: (_, __) => const BlogCardShimmer(),
+                        )
+                      : BlogsContent(blogs: filteredBlogs),
+                ),
               ],
             ),
           ),

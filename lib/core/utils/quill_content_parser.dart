@@ -1,35 +1,57 @@
 import 'dart:convert';
 import 'package:dart_quill_delta/dart_quill_delta.dart';
 
-/// Parses Quill Delta JSON content and extracts plain text
-/// Handles both JSON strings and already parsed JSON objects
+/// Parses blog content (Quill Delta JSON or HTML) and returns plain text
 String parseQuillContent(dynamic content) {
   if (content == null) return '';
-  
-  // If content is already a plain string (not JSON), return it as is
+
   if (content is String) {
-    // Check if it's a JSON string
-    if (content.trim().startsWith('[') || content.trim().startsWith('{')) {
+    final trimmed = content.trim();
+    // Quill Delta JSON
+    if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
       try {
-        // Try to parse as JSON
         final decoded = jsonDecode(content);
         return _extractTextFromDelta(decoded);
       } catch (e) {
-        // If parsing fails, it might be plain text, return as is
         return content;
       }
-    } else {
-      // It's already plain text
-      return content;
     }
+    // HTML (e.g. from another editor or export)
+    if (trimmed.contains('<') && trimmed.contains('>')) {
+      return _stripHtmlToPlainText(content);
+    }
+    return content;
   }
-  
-  // If content is already a List or Map (parsed JSON), extract text directly
+
   if (content is List || content is Map) {
     return _extractTextFromDelta(content);
   }
-  
+
   return content.toString();
+}
+
+/// Strip HTML tags and base64 image data to plain text
+String _stripHtmlToPlainText(String html) {
+  String text = html;
+  // Remove base64 image data (data:image/...;base64,...) so it doesn't flood the output
+  text = text.replaceAll(
+    RegExp(r'data:image/[^;]+;base64,[A-Za-z0-9+/=]+', caseSensitive: false),
+    '',
+  );
+  // Remove <img ...> tags (including broken ones)
+  text = text.replaceAll(RegExp(r'<img[^>]*>', caseSensitive: true), ' ');
+  // Remove all other HTML tags
+  text = text.replaceAll(RegExp(r'<[^>]*>'), ' ');
+  // Decode common entities
+  text = text
+      .replaceAll('&nbsp;', ' ')
+      .replaceAll('&amp;', '&')
+      .replaceAll('&lt;', '<')
+      .replaceAll('&gt;', '>')
+      .replaceAll('&quot;', '"');
+  // Collapse whitespace and trim
+  text = text.replaceAll(RegExp(r'\s+'), ' ').trim();
+  return text;
 }
 
 /// Extracts plain text from Quill Delta format

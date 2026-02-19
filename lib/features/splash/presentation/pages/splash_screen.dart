@@ -49,9 +49,10 @@ class _SplashScreenState extends State<SplashScreen> {
             Padding(
               padding: EdgeInsets.only(bottom: 10.sp),
               child: Column(
+                spacing: 5.sp,
                 children: [
-                  Text("Made with 🤍 by", style: textStyle_10White()),
-                  Text("Flutter Kanpur", style: textStyle_16RegularWhite()),
+                  Text("Made with 🤍 by", style: textStyle_12RegularGrey().copyWith(color: Colors.white)),
+                  Text("Flutter Kanpur", style: textStyle_16BoldBlack().copyWith(color: Colors.white)),
                 ],
               ),
             ),

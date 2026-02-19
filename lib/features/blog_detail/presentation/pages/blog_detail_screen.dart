@@ -231,52 +231,6 @@ class BlogDetailScreen extends StatelessWidget {
               ),
             ),
             // Bottom Interaction Bar
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildInteractionButton(
-                    icon: Icons.thumb_up_outlined,
-                    label: '1.2k',
-                    onTap: () {
-                      // TODO: Implement like functionality
-                    },
-                  ),
-                  _buildInteractionButton(
-                    icon: Icons.comment_outlined,
-                    label: '48',
-                    onTap: () {
-                      // TODO: Implement comment functionality
-                    },
-                  ),
-                  _buildInteractionButton(
-                    icon: Icons.share_outlined,
-                    label: '',
-                    onTap: () {
-                      // TODO: Implement share functionality
-                    },
-                  ),
-                  _buildInteractionButton(
-                    icon: Icons.bookmark_border,
-                    label: '',
-                    onTap: () {
-                      // TODO: Implement save functionality
-                    },
-                  ),
-                ],
-              ),
-            ),
           ],
         ),
       ),
