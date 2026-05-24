@@ -1,5 +1,5 @@
+import 'package:Readme/shared/widgets/app_bottom_nav_bar.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_kanpur_ui_kit/flutter_kanpur_ui_kit.dart';
 import 'package:go_router/go_router.dart';
 
 class MainActionScreen extends StatefulWidget {
@@ -12,12 +12,11 @@ class MainActionScreen extends StatefulWidget {
 
 class _MainActionScreenState extends State<MainActionScreen> {
   int _getCurrentIndex(BuildContext context) {
-    final String location = GoRouterState.of(context).uri.path;
+    final location = GoRouterState.of(context).uri.path;
     if (location.startsWith('/home')) return 0;
-    if (location.startsWith('/search')) return 1;
-    if (location.startsWith('/create')) return 2;
-    if (location.startsWith('/trending')) return 3;
-    if (location.startsWith('/profile')) return 4;
+    if (location.startsWith('/trending')) return 1;
+    if (location.startsWith('/search')) return 2;
+    if (location.startsWith('/profile')) return 3;
     return 0;
   }
 
@@ -27,15 +26,12 @@ class _MainActionScreenState extends State<MainActionScreen> {
         context.go('/home');
         break;
       case 1:
-        context.go('/search');
-        break;
-      case 2:
-        context.go('/create');
-        break;
-      case 3:
         context.go('/trending');
         break;
-      case 4:
+      case 2:
+        context.go('/search');
+        break;
+      case 3:
         context.go('/profile');
         break;
     }
@@ -46,8 +42,7 @@ class _MainActionScreenState extends State<MainActionScreen> {
     return Scaffold(
       extendBody: true,
       body: widget.child,
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: GlassBottomNavbar(
+      bottomNavigationBar: AppBottomNavBar(
         currentIndex: _getCurrentIndex(context),
         onTap: (index) => _onItemTapped(index, context),
       ),

@@ -25,7 +25,7 @@ class BlogModel extends Blog {
       title: json['title'],
       content: normalizeRawContent(json['content']),
       coverImage: json['cover_image'],
-      category: json['category'],
+      category: json['category'] ?? '',
       createdAt: DateTime.parse(json['created_at']),
       isPublished: json['is_published'] ?? false,
       imageUrls: imageUrls,

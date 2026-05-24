@@ -28,6 +28,29 @@ class BlogRemoteDatasource {
     return response.map<BlogModel>((e) => BlogModel.fromJson(e)).toList();
   }
 
+  Future<List<BlogModel>> fetchBlogsByAuthor(String authorId) async {
+    final response = await client
+        .from('blogs')
+        .select('''
+      blog_id,
+      title,
+      content,
+      cover_image,
+      created_at,
+      category,
+      is_published,
+      profiles!inner (
+        name,
+        avatar_url
+      )
+    ''')
+        .eq('author_id', authorId)
+        .eq('is_published', true)
+        .order('created_at', ascending: false);
+
+    return response.map<BlogModel>((e) => BlogModel.fromJson(e)).toList();
+  }
+
   Future<List<String>> fetchCategories() async {
     final response = await client
         .from('blogs')

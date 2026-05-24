@@ -78,6 +78,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return 'Something went wrong. Please try again.';
   }
 
+  Future<void> _syncProfileAfterSignUp({
+    required String userId,
+    required String username,
+  }) async {
+    try {
+      await supabase.from('profiles').upsert({
+        'id': userId,
+        'name': username,
+        'username': username,
+      });
+    } catch (e) {
+      debugPrint('Profile sync after sign-up failed: $e');
+    }
+  }
+
   Future<void> createAccount() async {
     if (loading) return;
 
@@ -113,13 +128,25 @@ class _SignUpScreenState extends State<SignUpScreen> {
         return;
       }
 
+      final username = _usernameController.text.trim();
+      final email = _emailController.text.trim();
+
       final result = await supabase.auth.signUp(
-        email: _emailController.text.trim(),
+        email: email,
         password: _passwordController.text,
         data: {
-          'username': _usernameController.text.trim(),
+          'username': username,
+          'name': username,
+          'full_name': username,
         },
       );
+
+      if (result.user != null) {
+        await _syncProfileAfterSignUp(
+          userId: result.user!.id,
+          username: username,
+        );
+      }
 
       if (!mounted) return;
 

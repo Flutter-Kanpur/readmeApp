@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/app_image.dart';
 import 'package:Readme/core/utils/text_style.dart';
+import 'package:Readme/features/create_blog_page/presentation/widgets/blog_article_settings_panel.dart';
 import 'package:Readme/features/create_blog_page/presentation/widgets/editor_toolbar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_kanpur_ui_kit/flutter_kanpur_ui_kit.dart';
@@ -27,8 +28,6 @@ class CreateBlogScreen extends StatefulWidget {
 class _CreateBlogScreenState extends State<CreateBlogScreen> {
   static const _draftTitleKey = 'draft_title';
   static const _draftContentKey = 'draft_content';
-  static const _userNameKey = 'user_name';
-  static const _userImageKey = 'user_profile_pic';
 
   late quill.QuillController _controller;
   final FocusNode _focusNode = FocusNode();
@@ -38,6 +37,20 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
   final supabase = Supabase.instance.client;
   final ImagePicker _imagePicker = ImagePicker();
   XFile? _coverImageFile;
+
+  String _publishAs = BlogArticleSettingsPanel.publishAsOptions.first;
+  String _selectedCategory = 'Technology';
+  final TextEditingController _tagController = TextEditingController();
+  final List<String> _tags = [];
+
+  static const _articleCategories = [
+    'Technology',
+    'Flutter',
+    'UI',
+    'React',
+    'JavaScript',
+    'DSA',
+  ];
 
   @override
   void initState() {
@@ -52,6 +65,7 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
     _focusNode.dispose();
     _scrollController.dispose();
     titleController.dispose();
+    _tagController.dispose();
     super.dispose();
   }
 
@@ -74,12 +88,39 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
   }
 
   // ================== AUTHOR ==================
-  Future<Map<String, String?>> _getCachedUser() async {
-    final prefs = await SharedPreferences.getInstance();
-    return {
-      'name': prefs.getString(_userNameKey),
-      'image': prefs.getString(_userImageKey),
-    };
+  Future<Map<String, String?>> _getAuthorInfo() async {
+    final user = supabase.auth.currentUser;
+    if (user == null) {
+      return {'name': null, 'image': null};
+    }
+
+    try {
+      final profileData = await supabase
+          .from('profiles')
+          .select()
+          .eq('id', user.id)
+          .maybeSingle();
+
+      final name = profileData?['name'] as String? ??
+          profileData?['full_name'] as String? ??
+          profileData?['username'] as String? ??
+          user.userMetadata?['full_name'] as String? ??
+          user.userMetadata?['name'] as String? ??
+          user.userMetadata?['username'] as String? ??
+          user.email?.split('@').first;
+
+      final image = profileData?['avatar_url'] as String? ??
+          user.userMetadata?['avatar_url'] as String?;
+
+      return {'name': name, 'image': image};
+    } catch (_) {
+      final name = user.userMetadata?['full_name'] as String? ??
+          user.userMetadata?['name'] as String? ??
+          user.userMetadata?['username'] as String? ??
+          user.email?.split('@').first;
+      final image = user.userMetadata?['avatar_url'] as String?;
+      return {'name': name, 'image': image};
+    }
   }
 
   // ================== SAVE DRAFT ==================
@@ -111,6 +152,19 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
       imageQuality: 85,
     );
     if (picked != null && mounted) setState(() => _coverImageFile = picked);
+  }
+
+  void _addTag(String value) {
+    final tag = value.trim();
+    if (tag.isEmpty || _tags.contains(tag)) return;
+    setState(() {
+      _tags.add(tag);
+      _tagController.clear();
+    });
+  }
+
+  void _removeTag(String tag) {
+    setState(() => _tags.remove(tag));
   }
 
   // ================== UPLOAD IMAGES ON PUBLISH ==================
@@ -205,6 +259,8 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
         'title': title,
         'content': jsonEncode(result['content']),
         'cover_image': coverImageUrl,
+        'category': _selectedCategory,
+        'tags': _tags.isEmpty ? null : _tags,
         'author_id': supabase.auth.currentUser!.id,
         'is_published': true,
       });
@@ -242,43 +298,66 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: true,
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: EditorToolbar(
-        controller: _controller,
-        focusNode: _focusNode,
-      ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.symmetric(horizontal: 20.0),
           child: Column(
             children: [
               _topBar(),
               const Divider(),
-              _coverImageBlock(),
+              EditorToolbar(
+                controller: _controller,
+                focusNode: _focusNode,
+              ),
+              5.verticalSpace,
               _titleBar(),
+              5.verticalSpace,
               _authorBlock(),
+              5.verticalSpace,
               Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(bottom: 100.sp),
-                  child: KeyboardListener(
-                    focusNode: FocusNode(),
-                    onKeyEvent: _handleTabIndent,
-                    child: quill.QuillEditor(
-                      controller: _controller,
-                      focusNode: _focusNode,
-                      scrollController: _scrollController,
-                      config: quill.QuillEditorConfig(
-                        placeholder: 'Start writing your blog...',
-                        embedBuilders: FlutterQuillEmbeds.editorBuilders(
-                          imageEmbedConfig: QuillEditorImageEmbedConfig(
-                            imageProviderBuilder: quillImageProviderBuilder,
-                          ),
+                child: KeyboardListener(
+                  focusNode: FocusNode(),
+                  onKeyEvent: _handleTabIndent,
+                  child: quill.QuillEditor(
+                    controller: _controller,
+                    focusNode: _focusNode,
+                    scrollController: _scrollController,
+                    config: quill.QuillEditorConfig(
+                      placeholder: 'Start writing your blog...',
+                      embedBuilders: FlutterQuillEmbeds.editorBuilders(
+                        imageEmbedConfig: QuillEditorImageEmbedConfig(
+                          imageProviderBuilder: quillImageProviderBuilder,
                         ),
                       ),
                     ),
                   ),
                 ),
               ),
+              ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: 340.h),
+                child: SingleChildScrollView(
+                  child: BlogArticleSettingsPanel(
+                    publishAs: _publishAs,
+                    onPublishAsChanged: (value) {
+                      if (value != null) setState(() => _publishAs = value);
+                    },
+                    selectedCategory: _selectedCategory,
+                    onCategoryChanged: (value) {
+                      if (value != null) setState(() => _selectedCategory = value);
+                    },
+                    categories: _articleCategories,
+                    coverImageFile: _coverImageFile,
+                    onPickCoverImage: _pickCoverImage,
+                    onRemoveCoverImage: () =>
+                        setState(() => _coverImageFile = null),
+                    tagController: _tagController,
+                    tags: _tags,
+                    onAddTag: _addTag,
+                    onRemoveTag: _removeTag,
+                  ),
+                ),
+              ),
+
             ],
           ),
         ),
@@ -300,7 +379,7 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
             TextButton(
               onPressed: _saveDraft,
               child: Text(
-                "Draft saved",
+                "Save Draft",
                 style: textStyle_12RegularGrey().copyWith(fontSize: 14.sp),
               ),
             ),
@@ -322,60 +401,6 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
     );
   }
 
-  Widget _coverImageBlock() {
-    return Padding(
-      padding: EdgeInsets.only(bottom: 12.h),
-      child: GestureDetector(
-        onTap: _pickCoverImage,
-        child: Container(
-          width: double.infinity,
-          height: 180.h,
-          decoration: BoxDecoration(
-            color: Colors.grey.shade200,
-            borderRadius: BorderRadius.circular(12.r),
-            border: Border.all(color: Colors.grey.shade400, width: 1),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: _coverImageFile != null
-              ? Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Image.file(
-                      File(_coverImageFile!.path),
-                      fit: BoxFit.cover,
-                    ),
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: Material(
-                        color: Colors.black54,
-                        shape: const CircleBorder(),
-                        child: IconButton(
-                          icon: const Icon(Icons.close, color: Colors.white, size: 20),
-                          onPressed: () => setState(() => _coverImageFile = null),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                        ),
-                      ),
-                    ),
-                  ],
-                )
-              : Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.add_photo_alternate_outlined, size: 48.sp, color: Colors.grey.shade600),
-                    SizedBox(height: 8.h),
-                    Text(
-                      'Add cover image',
-                      style: textStyle_14RegularGrey().copyWith(color: Colors.grey.shade600),
-                    ),
-                  ],
-                ),
-        ),
-      ),
-    );
-  }
-
   Widget _titleBar() {
     return TextField(
       controller: titleController,
@@ -389,7 +414,7 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
 
   Widget _authorBlock() {
     return FutureBuilder<Map<String, String?>>(
-      future: _getCachedUser(),
+      future: _getAuthorInfo(),
       builder: (context, snapshot) {
         final name = snapshot.data?['name'];
         final imageUrl = snapshot.data?['image'];
@@ -404,7 +429,7 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
                 child: imageUrl == null ? const Icon(Icons.person) : null,
               ),
               const SizedBox(width: 12),
-              Text(name ?? "Unknown author"),
+              Text(name ?? "Unknown author",style: textStyle_14LightBlack(),),
             ],
           ),
         );
