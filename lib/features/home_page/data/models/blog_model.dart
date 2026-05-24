@@ -11,21 +11,24 @@ class BlogModel extends Blog {
     required super.createdAt,
     required super.isPublished,
     required super.author,
+    super.imageUrls,
   });
 
-  factory BlogModel.fromJson(Map<String, dynamic> json) {
+  factory BlogModel.fromJson(
+    Map<String, dynamic> json, {
+    List<String>? imageUrls,
+  }) {
     final profile = json['profiles'];
-    final rawContent = json['content'];
-    final content = parseQuillContent(rawContent);
 
     return BlogModel(
       id: json['blog_id'],
       title: json['title'],
-      content: content,
+      content: normalizeRawContent(json['content']),
       coverImage: json['cover_image'],
       category: json['category'],
       createdAt: DateTime.parse(json['created_at']),
       isPublished: json['is_published'] ?? false,
+      imageUrls: imageUrls,
       author: Author(
         name: profile?['name'] ?? 'Unknown',
         avatarUrl: profile?['avatar_url'],

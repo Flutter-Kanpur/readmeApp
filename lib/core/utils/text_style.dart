@@ -80,7 +80,7 @@ TextStyle textStyle_24BoldBlack() {
     fontWeight: FontWeight.bold,
     color: const Color(0xFF000000),
     height: 1.0,
-    letterSpacing: 1.0
+    // letterSpacing: 1.0
   );
 }
 TextStyle textStyle_16RegularBlack() {

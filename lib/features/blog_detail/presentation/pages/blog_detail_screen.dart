@@ -1,283 +1,170 @@
-import 'dart:convert';
-
-import 'package:dart_quill_delta/dart_quill_delta.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:Readme/core/utils/string_extensions.dart';
-import 'package:Readme/core/utils/text_style.dart';
+import 'package:Readme/core/utils/app_colors.dart';
+import 'package:Readme/core/utils/app_image.dart';
+import 'package:Readme/core/utils/quill_content_parser.dart';
+import 'package:Readme/features/blog_detail/presentation/widgets/blog_content_viewer.dart';
 import 'package:Readme/features/home_page/domain/entities/blog.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class BlogDetailScreen extends StatelessWidget {
   final Blog blog;
 
   const BlogDetailScreen({super.key, required this.blog});
 
-  int _readTime(String text) {
-    final words = text.split(' ').length;
-    return (words / 200).ceil();
+  String _storagePublicUrl(String path) {
+    return Supabase.instance.client.storage
+        .from('blog_images')
+        .getPublicUrl(path);
+  }
+
+  String? _resolveCoverImageUrl() {
+    return resolveBlogImageUrl(
+      blog.coverImage,
+      storagePathToUrl: _storagePublicUrl,
+    ) ??
+        extractFirstImageUrl(
+          blog.content,
+          storagePathToUrl: _storagePublicUrl,
+        );
   }
 
   @override
   Widget build(BuildContext context) {
-    late final quill.Document document;
+    final coverImageUrl = _resolveCoverImageUrl();
 
-    try {
-      final decoded = jsonDecode(blog.content);
-      final delta = Delta.fromJson(decoded);
-      document = quill.Document.fromDelta(delta);
-    } catch (_) {
-      // fallback for old/plain blogs
-      document = quill.Document()..insert(0, blog.content);
-    }
-
-    final quillController = quill.QuillController(
-      document: document,
-      selection: const TextSelection.collapsed(offset: 0),
-    );
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Back Navigation
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
-              child: Row(
-                children: [
-                  GestureDetector(
+    return Container(
+      color: Colors.white,
+      child: SafeArea(
+        child: Scaffold(
+          backgroundColor: Colors.white,
+          body: Column(
+            children: [
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: GestureDetector(
                     onTap: () => context.pop(),
                     child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.chevron_left, size: 24),
-                        SizedBox(width: 4.w),
+                        Icon(Icons.chevron_left, size: 24.sp),
+                        SizedBox(width: 2.w),
                         Text(
                           'Back to home',
-                          style: textStyle_14RegularBlack(),
+                          style: GoogleFonts.poppins(
+                            fontSize: 14.sp,
+                            color: AppColors.black,
+                          ),
                         ),
                       ],
                     ),
                   ),
-                ],
-              ),
-            ),
-            // Scrollable Content
-            Expanded(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header Image/Placeholder
-                    Container(
-                      width: double.infinity,
-                      height: 200.h,
-                      color: Colors.grey.shade200,
-                      child: blog.coverImage != null
-                          ? Image.network(
-                              blog.coverImage!,
-                              fit: BoxFit.cover,
-                            )
-                          : Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    blog.category.smartCategoryCase(),
-                                    style: TextStyle(
-                                      fontSize: 32.sp,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                  ),
-                                  SizedBox(height: 8.h),
-                                  Text(
-                                    'qawemre',
-                                    style: TextStyle(
-                                      fontSize: 14.sp,
-                                      color: Colors.grey.shade500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                    ),
-                    // Content Section
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Category Tag
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 12.w,
-                              vertical: 6.h,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.blue.shade100,
-                              borderRadius: BorderRadius.circular(20.r),
-                            ),
-                            child: Text(
-                              blog.category.toUpperCase(),
-                              style: TextStyle(
-                                fontSize: 12.sp,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.blue.shade800,
-                              ),
-                            ),
-                          ),
-                          SizedBox(height: 16.h),
-                          // Title
-                          Text(
-                            blog.title,
-                            style: TextStyle(
-                              fontSize: 24.sp,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
-                              height: 1.3,
-                            ),
-                          ),
-                          SizedBox(height: 20.h),
-                          // Author Information
-                          Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 24.r,
-                                backgroundImage: blog.author.avatarUrl != null
-                                    ? NetworkImage(blog.author.avatarUrl!)
-                                    : null,
-                                child: blog.author.avatarUrl == null
-                                    ? const Icon(Icons.person)
-                                    : null,
-                              ),
-                              SizedBox(width: 12.w),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      blog.author.name,
-                                      style: TextStyle(
-                                        fontSize: 16.sp,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.black87,
-                                      ),
-                                    ),
-                                    SizedBox(height: 4.h),
-                                    Text(
-                                      '${DateFormat.yMMMd().format(blog.createdAt)} • ${_readTime(blog.content)} min read',
-                                      style: TextStyle(
-                                        fontSize: 12.sp,
-                                        color: Colors.grey.shade600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              // Follow Button
-                              ElevatedButton(
-                                onPressed: () {
-                                  // TODO: Implement follow functionality
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blue,
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: 20.w,
-                                    vertical: 10.h,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(20.r),
-                                  ),
-                                ),
-                                child: Text(
-                                  'Follow',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14.sp,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 30.h),
-
-// Article Content (formatted)
-                          quill.QuillEditor.basic(
-                            controller: quillController,
-                          ),
-
-                          SizedBox(height: 30.h),
-
-                          // Tags Section
-                          Wrap(
-                            spacing: 8.w,
-                            runSpacing: 8.h,
-                            children: [
-                              _buildTag('#Flutter'),
-                              _buildTag('#Performance'),
-                              _buildTag('#Dart'),
-                            ],
-                          ),
-                          SizedBox(height: 100.h), // Space for bottom interaction bar
-                        ],
-                      ),
-                    ),
-                  ],
                 ),
               ),
-            ),
-            // Bottom Interaction Bar
-          ],
-        ),
-      ),
-    );
-  }
-
-
-  Widget _buildTag(String tag) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(20.r),
-      ),
-      child: Text(
-        tag,
-        style: TextStyle(
-          fontSize: 12.sp,
-          color: Colors.grey.shade700,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInteractionButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 24.sp, color: Colors.grey.shade700),
-          if (label.isNotEmpty) ...[
-            SizedBox(width: 6.w),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 14.sp,
-                color: Colors.grey.shade700,
-                fontWeight: FontWeight.w500,
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: EdgeInsets.fromLTRB(24.w, 8.h, 24.w, 40.h),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        blog.title,
+                        softWrap: true,
+                        style: GoogleFonts.poppins(
+                          fontSize: 24.sp,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.black,
+                          height: 1.25,
+                          // letterSpacing: 1,
+                        ),
+                      ),
+                      if (coverImageUrl != null) ...[
+                        SizedBox(height: 20.h),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12.r),
+                          child: AppImage(
+                            source: coverImageUrl,
+                            width: double.infinity,
+                            height: 240.h,
+                            fit: BoxFit.cover,
+                            placeholder: Container(
+                              width: double.infinity,
+                              height: 240.h,
+                              color: Colors.grey.shade100,
+                              alignment: Alignment.center,
+                              child: const CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                        ),
+                      ],
+                      SizedBox(height: 20.h),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          CircleAvatar(
+                            radius: 20.r,
+                            backgroundColor: Colors.grey.shade200,
+                            backgroundImage: imageProviderFromSource(
+                              blog.author.avatarUrl,
+                            ),
+                            child: blog.author.avatarUrl == null
+                                ? Icon(Icons.person, size: 20.r)
+                                : null,
+                          ),
+                          SizedBox(width: 12.w),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  blog.author.name,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 15.sp,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.black,
+                                    height: 1.2,
+                                  ),
+                                ),
+                                SizedBox(height: 2.h),
+                                Text(
+                                  DateFormat('EEE MMM d yyyy')
+                                      .format(blog.createdAt),
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 13.sp,
+                                    color: AppColors.subtitles,
+                                    height: 1.2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 24.h),
+                      Divider(
+                        height: 1,
+                        thickness: 1,
+                        color: AppColors.borderGrey,
+                      ),
+                      SizedBox(height: 20.h),
+                      BlogContentViewer(
+                        content: blog.content,
+                        imageUrls: blog.imageUrls,
+                        excludeImageUrl: coverImageUrl,
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ],
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }

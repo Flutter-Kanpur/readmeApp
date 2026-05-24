@@ -7,6 +7,7 @@ class Blog {
   final DateTime createdAt;
   final bool isPublished;
   final Author author;
+  final List<String>? imageUrls;
 
   const Blog({
     required this.id,
@@ -17,6 +18,7 @@ class Blog {
     required this.createdAt,
     required this.isPublished,
     required this.author,
+    this.imageUrls,
   });
 }
 

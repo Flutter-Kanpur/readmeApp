@@ -44,7 +44,8 @@ class GradientButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       /// Handles tap interaction for the button
-      onTap: onTap,
+      onTap: (loading ?? false) ? null : onTap,
+      behavior: HitTestBehavior.opaque,
       child: ConstrainedBox(
         constraints: BoxConstraints(
           /// Prevents the button from becoming too wide on large screens
@@ -145,7 +146,7 @@ class GradientButton extends StatelessWidget {
                         width: 25.w,
                         child: CircularProgressIndicator(
                           color: Colors.white,
-                          strokeWidth: 5,
+                          strokeWidth: 3,
                         ),
                       )
                     : Text(text, style: textStyle_16RegularWhite()),

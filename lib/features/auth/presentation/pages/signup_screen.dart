@@ -1,9 +1,9 @@
-import 'package:Readme/features/home_page/presentation/pages/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:Readme/core/network/supabase_connectivity.dart';
 import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/text_style.dart';
-import 'package:Readme/features/auth/presentation/pages/login_with_email.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../shared/widgets/gradient_background.dart';
 import '../../../../shared/widgets/gradient_button.dart';
@@ -24,26 +24,148 @@ class _SignUpScreenState extends State<SignUpScreen> {
   bool loading = false;
   final supabase = Supabase.instance.client;
 
-  createAccount() async {
+  void _showSnackBar(SnackBar snackBar) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(snackBar);
+  }
+
+  String? _validateForm() {
+    final username = _usernameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    final confirmPassword = _confirmPasswordController.text;
+
+    if (username.isEmpty) {
+      return 'Please enter a username';
+    }
+    if (email.isEmpty) {
+      return 'Please enter your email address';
+    }
+    if (password.isEmpty) {
+      return 'Please enter a password';
+    }
+    if (password.length < 6) {
+      return 'Password must be at least 6 characters';
+    }
+    if (password != confirmPassword) {
+      return 'Passwords do not match';
+    }
+    return null;
+  }
+
+  String _errorMessage(Object error) {
+    final message = error.toString().toLowerCase();
+
+    if (error is AuthException) {
+      final authMessage = error.message.toLowerCase();
+      if (authMessage.contains('failed host lookup') ||
+          authMessage.contains('socketexception') ||
+          authMessage.contains('network is unreachable')) {
+        return 'No internet connection. Check your network and try again.';
+      }
+      return error.message;
+    }
+
+    if (message.contains('failed host lookup') ||
+        message.contains('socketexception') ||
+        message.contains('network is unreachable') ||
+        message.contains('clientexception')) {
+      return 'No internet connection. Check your network and try again.';
+    }
+
+    return 'Something went wrong. Please try again.';
+  }
+
+  Future<void> createAccount() async {
+    if (loading) return;
+
+    final validationError = _validateForm();
+    if (validationError != null) {
+      _showSnackBar(
+        SnackBar(
+          content: Text(validationError),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     setState(() {
       loading = true;
     });
+
     try {
+      final reachable = await SupabaseConnectivity.canReachServer();
+      if (!mounted) return;
+      if (!reachable) {
+        _showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Cannot reach Supabase. If you use an emulator, open Chrome there to '
+              'test internet, then cold boot the emulator. On a phone, check Wi‑Fi.',
+            ),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 6),
+          ),
+        );
+        return;
+      }
+
       final result = await supabase.auth.signUp(
-        email: _emailController.text,
+        email: _emailController.text.trim(),
         password: _passwordController.text,
+        data: {
+          'username': _usernameController.text.trim(),
+        },
       );
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (context) => HomeScreen()),
-        (context) => false,
+
+      if (!mounted) return;
+
+      if (result.session != null) {
+        _showSnackBar(
+          const SnackBar(
+            content: Text('Account created successfully!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        context.go('/home');
+        return;
+      }
+
+      _showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Account created! Check your email to confirm, then log in.',
+          ),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 4),
+        ),
+      );
+      context.go('/signin');
+    } on AuthException catch (e) {
+      _showSnackBar(
+        SnackBar(
+          content: Text(_errorMessage(e)),
+          backgroundColor: Colors.red,
+        ),
       );
     } catch (e) {
-      print(e.toString());
+      _showSnackBar(
+        SnackBar(
+          content: Text(_errorMessage(e)),
+          backgroundColor: Colors.red,
+        ),
+      );
+      debugPrint(e.toString());
     } finally {
-      setState(() {
-        loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          loading = false;
+        });
+      }
     }
   }
 
@@ -156,17 +278,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
       enablePasswordToggle: true,
       hintColor: AppColors.subtitles,
       hintFontSize: 16,
+      textInputAction: TextInputAction.done,
     );
   }
 
   Widget _buildCreateAccountButton() {
     return GradientButton(
+      loading: loading,
       text: "Create account",
       fontSize: 16,
-      onTap: () {
-        // Handle account creation
-        createAccount();
-      },
+      onTap: createAccount,
       height: 55.h,
       width: double.infinity,
     );
@@ -185,11 +306,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
             ),
             GestureDetector(
               onTap: () {
-                // Handle navigate to login
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => LoginWithEmail()),
-                );
+                context.go('/signin');
               },
               child: Text("Log in", style: textStyle_16RegularLinkBlue()),
             ),

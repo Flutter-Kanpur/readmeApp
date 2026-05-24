@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 
 import 'package:Readme/core/utils/app_colors.dart';
+import 'package:Readme/core/utils/app_image.dart';
 import 'package:Readme/core/utils/text_style.dart';
 import 'package:Readme/features/create_blog_page/presentation/widgets/editor_toolbar.dart';
 import 'package:flutter/material.dart';
@@ -116,17 +117,38 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
   Future<Map<String, dynamic>> _extractImagesWithPlaceholders(
     List<dynamic> deltaOps,
   ) async {
-    final List<String> imagePaths = [];
     final List<dynamic> cleanedOps = [];
     String? coverImageUrl;
-    int imageIndex = 0;
 
     for (final op in deltaOps) {
       // IMAGE OP
       if (op is Map && op['insert'] is Map && op['insert']['image'] is String) {
         final imageValue = op['insert']['image'] as String;
 
-        if (!imageValue.startsWith('http')) {
+        if (isDataUriImage(imageValue)) {
+          final bytes = decodeDataUriImage(imageValue);
+          if (bytes == null) continue;
+
+          final fileName =
+              'blogs/${DateTime.now().millisecondsSinceEpoch}.jpg';
+
+          await supabase.storage
+              .from('blog_images')
+              .uploadBinary(fileName, bytes);
+
+          final publicUrl = supabase.storage
+              .from('blog_images')
+              .getPublicUrl(fileName);
+          coverImageUrl ??= publicUrl;
+          cleanedOps.add({'insert': {'image': publicUrl}});
+          cleanedOps.add({'insert': '\n'});
+        } else if (imageValue.startsWith('http') || imageValue.startsWith('//')) {
+          final publicUrl =
+              imageValue.startsWith('//') ? 'https:$imageValue' : imageValue;
+          cleanedOps.add({'insert': {'image': publicUrl}});
+          cleanedOps.add({'insert': '\n'});
+          coverImageUrl ??= publicUrl;
+        } else {
           final file = File(imageValue);
           final bytes = await file.readAsBytes();
 
@@ -136,18 +158,12 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
               .from('blog_images')
               .uploadBinary(fileName, bytes);
 
-          // ✅ Save path
-          imagePaths.add(fileName);
-
-          // ✅ Set cover image ONLY ONCE (first image)
-          coverImageUrl ??= supabase.storage
+          final publicUrl = supabase.storage
               .from('blog_images')
               .getPublicUrl(fileName);
-
-          // ✅ Insert placeholder to preserve order
-          cleanedOps.add({'insert': '[[IMAGE$imageIndex]]\n'});
-
-          imageIndex++;
+          coverImageUrl ??= publicUrl;
+          cleanedOps.add({'insert': {'image': publicUrl}});
+          cleanedOps.add({'insert': '\n'});
         }
         continue;
       }
@@ -157,8 +173,7 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
 
     return {
       'content': cleanedOps,
-      'image_paths': imagePaths,
-      'cover_image': coverImageUrl, // 👈 NEW
+      'cover_image': coverImageUrl,
     };
   }
 
@@ -189,7 +204,6 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
       await supabase.from('blogs').insert({
         'title': title,
         'content': jsonEncode(result['content']),
-        'image_paths': result['image_paths'],
         'cover_image': coverImageUrl,
         'author_id': supabase.auth.currentUser!.id,
         'is_published': true,
@@ -255,7 +269,11 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
                       scrollController: _scrollController,
                       config: quill.QuillEditorConfig(
                         placeholder: 'Start writing your blog...',
-                        embedBuilders: FlutterQuillEmbeds.editorBuilders(),
+                        embedBuilders: FlutterQuillEmbeds.editorBuilders(
+                          imageEmbedConfig: QuillEditorImageEmbedConfig(
+                            imageProviderBuilder: quillImageProviderBuilder,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -382,9 +400,7 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
             children: [
               CircleAvatar(
                 radius: 18,
-                backgroundImage: imageUrl != null
-                    ? NetworkImage(imageUrl)
-                    : null,
+                backgroundImage: imageProviderFromSource(imageUrl),
                 child: imageUrl == null ? const Icon(Icons.person) : null,
               ),
               const SizedBox(width: 12),

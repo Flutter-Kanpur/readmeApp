@@ -5,6 +5,7 @@ import 'package:Readme/features/home_page/presentation/utils/blog_category_utils
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:Readme/features/home_page/data/datasource/blog_remote_datasource.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:Readme/features/home_page/data/repositories/blog_repository_impl.dart';
 import 'package:Readme/features/home_page/domain/repositories/blog_repository.dart';
@@ -67,11 +68,30 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
+          forceMaterialTransparency: true,
           automaticallyImplyLeading: false,
           backgroundColor: Colors.transparent,
           title: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: Text("Readme", style: textStyle_24BoldBlack()),
+            child: Row(
+              children: [
+                ClipRRect(
+                    borderRadius: BorderRadius.circular(5),
+                    child: Container(
+                        color: Colors.black,
+                        height: 30.h,
+                        width: 30.w,
+                        child: Padding(
+                          padding: const EdgeInsets.all(4.0),
+                          child: SvgPicture.asset("assets/icons/logo.svg"),
+                        ))),
+                10.horizontalSpace,
+                Text("Readme", style: textStyle_24BoldBlack().copyWith(
+                  fontSize: 20.sp,
+                  fontWeight: FontWeight.w700,
+                )),
+              ],
+            ),
           ),
         ),
         extendBody: true,

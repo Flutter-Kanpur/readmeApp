@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shimmer/shimmer.dart';
-import '../../../../core/utils/app_colors.dart';
 
 class BlogCardShimmer extends StatelessWidget {
   const BlogCardShimmer({super.key});
@@ -35,105 +34,40 @@ class BlogCardShimmer extends StatelessWidget {
       highlightColor: _highlightColor,
       period: const Duration(milliseconds: 1200),
       child: Container(
-        padding: EdgeInsets.all(14.sp),
+        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
         decoration: BoxDecoration(
           color: _highlightColor,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.borderGrey.withOpacity(0.6)),
+          borderRadius: BorderRadius.circular(20.r),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.06),
-              blurRadius: 12,
-              offset: const Offset(0, 2),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Author row
+            _shimmerBox(width: 90, height: 13, borderRadius: 6),
+            SizedBox(height: 14.h),
             Row(
               children: [
-                _shimmerBox(
-                  width: 40,
-                  height: 40,
-                  shape: BoxShape.circle,
-                ),
+                _shimmerBox(width: 32, height: 32, shape: BoxShape.circle),
                 SizedBox(width: 10.w),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _shimmerBox(width: 100, height: 14, borderRadius: 6),
-                      SizedBox(height: 8.h),
-                      _shimmerBox(width: 130, height: 12, borderRadius: 6),
-                    ],
-                  ),
-                ),
+                _shimmerBox(width: 140, height: 15, borderRadius: 6),
               ],
             ),
-            SizedBox(height: 14.h),
-            Divider(height: 1, color: AppColors.borderGrey),
-            SizedBox(height: 14.h),
-            // Content row: text + image
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _shimmerBox(
-                        width: double.infinity,
-                        height: 12,
-                        borderRadius: 6,
-                      ),
-                      SizedBox(height: 10.h),
-                      _shimmerBox(
-                        width: double.infinity,
-                        height: 12,
-                        borderRadius: 6,
-                      ),
-                      SizedBox(height: 10.h),
-                      _shimmerBox(
-                        width: double.infinity,
-                        height: 12,
-                        borderRadius: 6,
-                      ),
-                      SizedBox(height: 10.h),
-                      _shimmerBox(
-                        width: 140.w,
-                        height: 12,
-                        borderRadius: 6,
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(width: 12.w),
-                _shimmerBox(
-                  width: 130.w,
-                  height: 100.h,
-                  borderRadius: 15,
-                ),
-              ],
-            ),
-            SizedBox(height: 18.h),
-            // Tag + Read more row
-            Row(
-              children: [
-                _shimmerBox(
-                  width: 72,
-                  height: 30,
-                  borderRadius: 20,
-                ),
-                const Spacer(),
-                _shimmerBox(
-                  width: 76,
-                  height: 22,
-                  borderRadius: 6,
-                ),
-              ],
-            ),
+            SizedBox(height: 16.h),
+            _shimmerBox(width: double.infinity, height: 20, borderRadius: 6),
+            SizedBox(height: 8.h),
+            _shimmerBox(width: double.infinity, height: 20, borderRadius: 6),
+            SizedBox(height: 10.h),
+            _shimmerBox(width: double.infinity, height: 14, borderRadius: 6),
+            SizedBox(height: 8.h),
+            _shimmerBox(width: double.infinity, height: 14, borderRadius: 6),
+            SizedBox(height: 8.h),
+            _shimmerBox(width: 180.w, height: 14, borderRadius: 6),
           ],
         ),
       ),

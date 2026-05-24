@@ -50,6 +50,9 @@ dependencies:
   dart_quill_delta: ^10.8.3
   flutter_quill: ^11.5.0
   flutter_quill_extensions: ^11.0.0
+  flutter_quill_delta_from_html: ^1.5.3
+  markdown: ^7.3.0
+  html_unescape: ^2.0.0
   vsc_quill_delta_to_html: ^1.0.5
   shimmer: ^3.0.0
 
@@ -95,9 +98,14 @@ flutter:
   # list giving the asset and other descriptors for the font. For
   # example:
   fonts:
-     - family: ProductSans
-       fonts:
-         - asset: assets/fonts/product sans full/ProductSans-Regular.ttf
+    - family: ProductSans
+      fonts:
+        - asset: assets/fonts/product sans full/ProductSans-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/product sans full/ProductSans-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/product sans full/ProductSans-Medium.ttf
+          weight: 500
   #       - asset: fonts/Schyler-Italic.ttf
   #         style: italic
   #   - family: Trajan Pro

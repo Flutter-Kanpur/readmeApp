@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../domain/entities/story.dart';
 import '../widgets/stat_item.dart';
 import '../widgets/story_tile.dart';
+import '../../../../core/utils/app_image.dart';
 import '../../../../shared/widgets/gradient_background.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -174,8 +175,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           backgroundColor: Colors.grey[100],
           backgroundImage: _imageFile != null
               ? FileImage(File(_imageFile!.path))
-              : (avatarUrl != null ? NetworkImage(avatarUrl) : null)
-                    as ImageProvider?,
+              : imageProviderFromSource(avatarUrl),
           child: (_imageFile == null && avatarUrl == null)
               ? Icon(Icons.person, size: 60.r, color: Colors.grey[400])
               : null,
