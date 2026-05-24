@@ -601,7 +601,7 @@ Map<String, dynamic> _copyOpWithInsert(Map op, String insert) {
   };
 }
 
-/// Strip HTML tags and base64 image data to plain text
+/// Strip HTML tags and base64 image data to plain text for card previews.
 String _stripHtmlToPlainText(String html) {
   String text = html;
   text = text.replaceAll(
@@ -609,9 +609,11 @@ String _stripHtmlToPlainText(String html) {
     '',
   );
   text = text.replaceAll(RegExp(r'<img[^>]*>', caseSensitive: true), ' ');
-  text = text.replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n');
-  text = text.replaceAll(RegExp(r'</p>', caseSensitive: false), '\n\n');
-  text = text.replaceAll(RegExp(r'</li>', caseSensitive: false), '\n');
+  text = text.replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), ' ');
+  text = text.replaceAll(RegExp(r'</p>', caseSensitive: false), ' ');
+  text = text.replaceAll(RegExp(r'</h[1-6]>', caseSensitive: false), ' ');
+  text = text.replaceAll(RegExp(r'</li>', caseSensitive: false), ' ');
+  text = text.replaceAll(RegExp(r'</pre>', caseSensitive: false), ' ');
   text = text.replaceAll(RegExp(r'<[^>]*>'), ' ');
   text = text
       .replaceAll('&nbsp;', ' ')
@@ -619,9 +621,11 @@ String _stripHtmlToPlainText(String html) {
       .replaceAll('&lt;', '<')
       .replaceAll('&gt;', '>')
       .replaceAll('&quot;', '"');
-  text = text.replaceAll(RegExp(r'[ \t]+'), ' ');
-  text = text.replaceAll(RegExp(r'\n{3,}'), '\n\n');
-  return text.trim();
+  return _collapsePreviewWhitespace(text);
+}
+
+String _collapsePreviewWhitespace(String text) {
+  return text.replaceAll(RegExp(r'\s+'), ' ').trim();
 }
 
 /// Extracts plain text from Quill Delta format
@@ -651,7 +655,7 @@ String _extractTextFromDelta(dynamic deltaData) {
       }
     }
 
-    return buffer.toString().trim();
+    return _collapsePreviewWhitespace(buffer.toString());
   } catch (_) {
     return _manualExtractText(deltaData);
   }
@@ -671,14 +675,14 @@ String _manualExtractText(dynamic data) {
             }
           } else if (insert is Map) {
             if (!insert.containsKey('image')) {
-              buffer.write('\n');
+              buffer.write(' ');
             }
           }
         }
       }
     }
-    return buffer.toString().trim();
+    return _collapsePreviewWhitespace(buffer.toString());
   }
 
-  return data.toString();
+  return _collapsePreviewWhitespace(data.toString());
 }

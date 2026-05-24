@@ -71,11 +71,11 @@ class BlogCard extends StatelessWidget {
                 ),
               ],
             ),
-            SizedBox(height: 16.h),
+            SizedBox(height: 10.h),
             Text(
               blog.title,
               style: textStyle_16BoldBlack().copyWith(
-                fontSize: 18.sp,
+                fontSize: 16.sp,
                 fontWeight: FontWeight.w700,
                 height: 1.25,
               ),
@@ -88,7 +88,7 @@ class BlogCard extends StatelessWidget {
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
               style: textStyle_14RegularGrey().copyWith(
-                fontSize: 16.sp,
+                fontSize: 14.sp,
                 color: AppColors.subtitles,
                 height: 1.45,
               ),
