@@ -244,12 +244,14 @@ class _BlogContentViewerState extends State<BlogContentViewer> {
         margin: Margins.only(bottom: 16, top: 8),
       ),
       'strong': Style(
+        color: AppColors.black,
         fontFamily: sansFamily,
         fontSize: FontSize(18.sp),
         fontWeight: FontWeight.w700,
       ),
       'b': Style(
         fontFamily: sansFamily,
+        color: AppColors.black,
         fontSize: FontSize(18.sp),
         fontWeight: FontWeight.w700,
       ),

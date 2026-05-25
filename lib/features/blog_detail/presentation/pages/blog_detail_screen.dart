@@ -1,3 +1,4 @@
+import 'package:Readme/core/utils/text_style.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
@@ -44,24 +45,40 @@ class BlogDetailScreen extends StatelessWidget {
           body: Column(
             children: [
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: GestureDetector(
-                    onTap: () => context.pop(),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.chevron_left, size: 24.sp),
-                        SizedBox(width: 2.w),
-                        Text(
-                          'Back to home',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14.sp,
-                            color: AppColors.black,
-                          ),
+                  child: Material(
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(999),
+                    child: InkWell(
+                      onTap: () => context.pop(),
+                      borderRadius: BorderRadius.circular(999),
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 12.w,
+                          vertical: 8.h,
                         ),
-                      ],
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.arrow_back,
+                              size: 16.sp,
+                              color: AppColors.bgBlue,
+                            ),
+                            SizedBox(width: 8.w),
+                            Text(
+                              'Back to Explore',
+                              style: textStyle_14RegularBlack().copyWith(
+                                fontSize: 14.sp,
+                                color: AppColors.linkBlue,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -124,7 +141,7 @@ class BlogDetailScreen extends StatelessWidget {
                               children: [
                                 Text(
                                   blog.author.name,
-                                  style: GoogleFonts.poppins(
+                                  style: GoogleFonts.ptSans(
                                     fontSize: 15.sp,
                                     fontWeight: FontWeight.w600,
                                     color: AppColors.black,

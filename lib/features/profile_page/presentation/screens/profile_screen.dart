@@ -73,9 +73,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _user?.userMetadata?['username'] ??
       'User';
 
-  String get _bio =>
-      _profileData?['bio'] ??
-      'A community for Flutter enthusiasts & developers who think different, read different, and build different.';
+  String get _subtitle {
+    final headline = _profileData?['headline'] as String?;
+    final bio = _profileData?['bio'] as String?;
+    if (headline != null && headline.trim().isNotEmpty) return headline.trim();
+    if (bio != null && bio.trim().isNotEmpty) return bio.trim();
+    return '';
+  }
 
   String? get _avatarUrl =>
       _profileData?['avatar_url'] ?? _user?.userMetadata?['avatar_url'];
@@ -133,7 +137,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         SizedBox(height: 12.h),
         Text(
-          _bio,
+          _subtitle,
           textAlign: TextAlign.center,
           style: textStyle_14RegularGrey().copyWith(
             fontSize: 14.sp,

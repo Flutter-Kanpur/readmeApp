@@ -2,13 +2,17 @@ import 'package:Readme/features/auth/presentation/pages/login_with_email.dart';
 import 'package:Readme/features/auth/presentation/pages/welcome_screen.dart';
 import 'package:Readme/features/auth/presentation/pages/signup_screen.dart';
 import 'package:Readme/features/create_blog_page/presentation/pages/create_blog_screen.dart';
+import 'package:Readme/features/create_blog_page/presentation/pages/my_drafts_screen.dart';
 import 'package:Readme/features/home_page/presentation/pages/home_screen.dart';
 import 'package:Readme/features/profile_page/presentation/screens/edit_profile_screen.dart';
 import 'package:Readme/features/profile_page/presentation/screens/profile_screen.dart';
 import 'package:Readme/features/splash/presentation/pages/splash_screen.dart';
 import 'package:Readme/features/main_action/presentation/main_action_screen.dart';
 import 'package:Readme/features/search/presentation/pages/search_screen.dart';
-import 'package:Readme/features/trending/presentation/pages/trending_screen.dart';
+import 'package:Readme/features/communities/presentation/pages/communities_screen.dart';
+import 'package:Readme/features/communities/presentation/pages/community_dashboard_screen.dart';
+import 'package:Readme/features/communities/presentation/pages/community_detail_screen.dart';
+import 'package:Readme/features/communities/domain/entities/community.dart';
 import 'package:Readme/features/blog_detail/presentation/pages/blog_detail_screen.dart';
 import 'package:Readme/features/home_page/domain/entities/blog.dart';
 import 'package:go_router/go_router.dart';
@@ -57,31 +61,78 @@ class AppRouter{
           return BlogDetailScreen(blog: blog);
         },
       ),
-      // ShellRoute for bottom navigation bar
-      ShellRoute(
-        builder: (context, state, child) {
-          return MainActionScreen(child: child);
+      GoRoute(
+        path: '/community/:slug/dashboard',
+        name: 'community_dashboard',
+        builder: (context, state) {
+          final slug = state.pathParameters['slug']!;
+          final community = state.extra as Community?;
+          return CommunityDashboardScreen(slug: slug, community: community);
         },
-        routes: [
-          GoRoute(
-            path: '/home',
-            name: 'home',
-            builder: (context, state) => const HomeScreen(),
+      ),
+      GoRoute(
+        path: '/community/:slug',
+        name: 'community_detail',
+        builder: (context, state) {
+          final slug = state.pathParameters['slug']!;
+          final community = state.extra as Community?;
+          return CommunityDetailScreen(slug: slug, community: community);
+        },
+      ),
+      // StatefulShellRoute keeps each tab's state alive across switches so
+      // data fetched in initState isn't reloaded every time the user toggles
+      // bottom-nav tabs.
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) {
+          return MainActionScreen(navigationShell: navigationShell);
+        },
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/home',
+                name: 'home',
+                builder: (context, state) => const HomeScreen(),
+              ),
+            ],
           ),
-          GoRoute(
-            path: '/search',
-            name: 'search',
-            builder: (context, state) => const SearchScreen(),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/trending',
+                name: 'trending',
+                builder: (context, state) => const CommunitiesScreen(),
+              ),
+            ],
           ),
-          GoRoute(
-            path: '/trending',
-            name: 'trending',
-            builder: (context, state) => const TrendingScreen(),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/search',
+                name: 'search',
+                builder: (context, state) => const SearchScreen(),
+              ),
+            ],
           ),
-          GoRoute(
-            path: '/profile',
-            name: 'profile',
-            builder: (context, state) => const ProfileScreen(),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/profile',
+                name: 'profile',
+                builder: (context, state) => const ProfileScreen(),
+              ),
+            ],
+          ),
+          // Drafts is the 5th branch so the bottom nav stays visible while
+          // the user manages drafts. Index 4 corresponds to the pencil CTA.
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/drafts',
+                name: 'drafts',
+                builder: (context, state) => const MyDraftsScreen(),
+              ),
+            ],
           ),
         ],
       ),

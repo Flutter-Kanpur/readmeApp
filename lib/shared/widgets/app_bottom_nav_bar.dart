@@ -7,10 +7,16 @@ class AppBottomNavBar extends StatelessWidget {
     super.key,
     required this.currentIndex,
     required this.onTap,
+    required this.onCtaTap,
+    this.hasDraft = false,
+    this.isDraftActive = false,
   });
 
   final int currentIndex;
   final ValueChanged<int> onTap;
+  final VoidCallback onCtaTap;
+  final bool hasDraft;
+  final bool isDraftActive;
 
   static const _items = [
     _NavItemData(
@@ -35,6 +41,11 @@ class AppBottomNavBar extends StatelessWidget {
     ),
   ];
 
+  int _navIndexFor(int barIndex) {
+    if (barIndex < 2) return barIndex;
+    return barIndex - 1;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -47,18 +58,134 @@ class AppBottomNavBar extends StatelessWidget {
         child: Padding(
           padding: EdgeInsets.symmetric(vertical: 8.h),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              for (var i = 0; i < _items.length; i++)
-                Expanded(
-                  child: _NavItem(
-                    data: _items[i],
-                    isSelected: currentIndex == i,
-                    onTap: () => onTap(i),
+              for (var i = 0; i < 5; i++)
+                if (i == 2)
+                  Expanded(
+                    child: _DraftCtaButton(
+                      onTap: onCtaTap,
+                      hasDraft: hasDraft,
+                      isActive: isDraftActive,
+                    ),
+                  )
+                else
+                  Expanded(
+                    child: _NavItem(
+                      data: _items[_navIndexFor(i)],
+                      isSelected: currentIndex == _navIndexFor(i),
+                      onTap: () => onTap(_navIndexFor(i)),
+                    ),
                   ),
-                ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _NavBarSlot extends StatelessWidget {
+  const _NavBarSlot({
+    required this.icon,
+    required this.label,
+    required this.labelColor,
+    required this.onTap,
+  });
+
+  final Widget icon;
+  final String label;
+  final Color labelColor;
+  final VoidCallback onTap;
+
+  static double get iconSlotHeight => 28.h;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 6.h),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                height: iconSlotHeight,
+                child: Center(child: icon),
+              ),
+              SizedBox(height: 4.h),
+              Text(
+                label,
+                style: TextStyle(
+                  fontFamily: 'ProductSans',
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.w500,
+                  color: labelColor,
+                  height: 1.2,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DraftCtaButton extends StatelessWidget {
+  const _DraftCtaButton({
+    required this.onTap,
+    required this.hasDraft,
+    this.isActive = false,
+  });
+
+  final VoidCallback onTap;
+  final bool hasDraft;
+  final bool isActive;
+
+  @override
+  Widget build(BuildContext context) {
+    return _NavBarSlot(
+      onTap: onTap,
+      label: 'Draft',
+      labelColor: isActive ? AppColors.linkBlue : AppColors.subtitles,
+      icon: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: 28.w,
+            height: 28.w,
+            decoration: BoxDecoration(
+              color: AppColors.black,
+              shape: BoxShape.circle,
+              border: isActive
+                  ? Border.all(color: AppColors.linkBlue, width: 2)
+                  : null,
+            ),
+            child: Icon(
+              Icons.edit_outlined,
+              size: 16.sp,
+              color: Colors.white,
+            ),
+          ),
+          if (hasDraft)
+            Positioned(
+              top: -1,
+              right: -1,
+              child: Container(
+                width: 8.w,
+                height: 8.w,
+                decoration: BoxDecoration(
+                  color: AppColors.linkBlue,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 1.5),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -91,34 +218,14 @@ class _NavItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = isSelected ? AppColors.linkBlue : AppColors.subtitles;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 6.h),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                isSelected ? data.activeIcon : data.icon,
-                size: 24.sp,
-                color: color,
-              ),
-              SizedBox(height: 4.h),
-              Text(
-                data.label,
-                style: TextStyle(
-                  fontFamily: 'ProductSans',
-                  fontSize: 12.sp,
-                  fontWeight: FontWeight.w500,
-                  color: color,
-                  height: 1.2,
-                ),
-              ),
-            ],
-          ),
-        ),
+    return _NavBarSlot(
+      onTap: onTap,
+      label: data.label,
+      labelColor: color,
+      icon: Icon(
+        isSelected ? data.activeIcon : data.icon,
+        size: 24.sp,
+        color: color,
       ),
     );
   }

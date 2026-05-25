@@ -1,14 +1,15 @@
+import 'dart:convert';
 import 'dart:io';
-import 'dart:math';
+
+import 'package:Readme/core/utils/app_colors.dart';
+import 'package:Readme/core/utils/app_image.dart';
+import 'package:Readme/core/utils/text_style.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../../../core/utils/app_image.dart';
-import '../../../../shared/widgets/gradient_background.dart';
-import '../../../../shared/widgets/textfield.dart';
-import '../../../../shared/widgets/gradient_button.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -18,6 +19,8 @@ class EditProfileScreen extends StatefulWidget {
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
+  static const _maxImageBytes = 2 * 1024 * 1024;
+
   XFile? _imageFile;
   final ImagePicker _picker = ImagePicker();
   bool _isLoading = false;
@@ -26,10 +29,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final supabase = Supabase.instance.client;
   User? _user;
   Map<String, dynamic>? _profileData;
+  String _username = '';
 
   final TextEditingController _fullNameController = TextEditingController();
-  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _headlineController = TextEditingController();
   final TextEditingController _bioController = TextEditingController();
+  final TextEditingController _twitterController = TextEditingController();
+  final TextEditingController _linkedinController = TextEditingController();
+  final TextEditingController _websiteController = TextEditingController();
 
   @override
   void initState() {
@@ -37,6 +44,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _user = supabase.auth.currentUser;
     _fetchProfile();
   }
+
+  String _socialPrefsKey(String userId) => 'profile_social_$userId';
 
   Future<void> _fetchProfile() async {
     if (_user == null) return;
@@ -48,31 +57,52 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           .eq('id', _user!.id)
           .maybeSingle();
 
+      final prefs = await SharedPreferences.getInstance();
+      final socialJson = prefs.getString(_socialPrefsKey(_user!.id));
+      Map<String, dynamic> social = {};
+      if (socialJson != null) {
+        social = jsonDecode(socialJson) as Map<String, dynamic>;
+      }
+
       if (mounted) {
         setState(() {
           _profileData = data;
           _fullNameController.text = data?['name'] ?? '';
-          _usernameController.text = data?['username'] ?? '';
-          _bioController.text =
-              data?['bio'] ?? 'Flutter developer and tech explorer';
+          _headlineController.text = data?['headline'] ?? '';
+          _bioController.text = data?['bio'] ?? '';
+          _username = data?['username'] ?? '';
+          _twitterController.text = social['twitter'] as String? ?? '';
+          _linkedinController.text = social['linkedin'] as String? ?? '';
+          _websiteController.text = social['website'] as String? ?? '';
           _isLoadingProfile = false;
         });
       }
     } catch (e) {
       debugPrint('Error fetching profile: $e');
-      if (mounted) {
-        setState(() {
-          _isLoadingProfile = false;
-        });
-      }
+      if (mounted) setState(() => _isLoadingProfile = false);
     }
   }
 
   Future<void> _pickImage() async {
     final XFile? selected = await _picker.pickImage(
       source: ImageSource.gallery,
+      maxWidth: 1200,
+      imageQuality: 85,
     );
-    if (selected != null) setState(() => _imageFile = selected);
+    if (selected == null || !mounted) return;
+
+    final bytes = await selected.readAsBytes();
+    if (bytes.length > _maxImageBytes) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Image must be 2MB or smaller.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _imageFile = selected);
   }
 
   Future<String?> _uploadProfileImage() async {
@@ -90,41 +120,31 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
       await supabase.storage.from('blog_images').uploadBinary(filePath, bytes);
 
-      final imageUrl = supabase.storage
-          .from('blog_images')
-          .getPublicUrl(filePath);
-
-      return imageUrl;
+      return supabase.storage.from('blog_images').getPublicUrl(filePath);
     } catch (e) {
       debugPrint('Error uploading image: $e');
       return null;
     }
   }
 
-  String _generateUsername(String name) {
-    String cleanName = name
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9]'), '')
-        .trim();
-
-    if (cleanName.isEmpty) {
-      cleanName = 'user';
-    }
-
-    final random = Random();
-    final randomNumber = 1000 + random.nextInt(9000);
-
-    return '${cleanName}_$randomNumber';
+  Future<void> _saveSocialLinks(String userId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _socialPrefsKey(userId),
+      jsonEncode({
+        'twitter': _twitterController.text.trim(),
+        'linkedin': _linkedinController.text.trim(),
+        'website': _websiteController.text.trim(),
+      }),
+    );
   }
 
   Future<void> _saveProfile() async {
-    debugPrint('========== SAVE PROFILE START ==========');
-
     final name = _fullNameController.text.trim();
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Name cannot be empty'),
+          content: Text('Full name cannot be empty'),
           backgroundColor: Colors.red,
         ),
       );
@@ -135,45 +155,29 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     try {
       final user = supabase.auth.currentUser;
-      debugPrint('👤 Current user: ${user?.id}');
-
       if (user == null) {
-        debugPrint('❌ No authenticated user');
         if (mounted) setState(() => _isLoading = false);
         return;
       }
 
-      // Generate username if empty
-      String username = _usernameController.text.trim();
-      if (username.isEmpty) {
-        username = _generateUsername(name);
-        _usernameController.text = username;
-      }
-
-      debugPrint('✍️ Full Name: $name');
-      debugPrint('✍️ Username: $username');
-      debugPrint('✍️ Bio: ${_bioController.text}');
-
       final imageUrl = await _uploadProfileImage();
-      debugPrint('🖼 Uploaded image URL: $imageUrl');
 
-      final Map<String, dynamic> updates = {
+      final updates = <String, dynamic>{
         'name': name,
-        'username': username,
+        'headline': _headlineController.text.trim(),
         'bio': _bioController.text.trim(),
       };
+
+      if (_username.isNotEmpty) {
+        updates['username'] = _username;
+      }
 
       if (imageUrl != null) {
         updates['avatar_url'] = imageUrl;
       }
 
-      final response = await supabase
-          .from('profiles')
-          .update(updates)
-          .eq('id', user.id)
-          .select();
-
-      debugPrint('✅ Supabase response: $response');
+      await supabase.from('profiles').update(updates).eq('id', user.id);
+      await _saveSocialLinks(user.id);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -184,9 +188,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         );
         context.go('/profile');
       }
-    } catch (e, st) {
-      debugPrint('❌ ERROR: $e');
-      debugPrint('📍 STACK TRACE: $st');
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -196,166 +198,314 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         );
       }
     } finally {
-      setState(() => _isLoading = false);
-      debugPrint('========== SAVE PROFILE END ==========');
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   void dispose() {
     _fullNameController.dispose();
-    _usernameController.dispose();
+    _headlineController.dispose();
     _bioController.dispose();
+    _twitterController.dispose();
+    _linkedinController.dispose();
+    _websiteController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return GradientBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          leading: IconButton(
-            icon: const Icon(Icons.chevron_left, size: 28, color: Colors.black),
-            onPressed: () => context.go('/profile'),
-            padding: EdgeInsets.zero,
-          ),
-          title: Text(
-            'Edit Profile',
-            style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w600),
-          ),
-          centerTitle: true,
-        ),
-        body: SafeArea(
-          child: _isLoadingProfile
-              ? const Center(child: CircularProgressIndicator())
-              : SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 20.w,
-                      vertical: 10.h,
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: _isLoadingProfile
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: EdgeInsets.fromLTRB(20.w, 12.h, 20.w, 32.h),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildBackLink(),
+                    SizedBox(height: 16.h),
+                    Text(
+                      'Edit Profile',
+                      style: textStyle_24BoldBlack().copyWith(
+                        fontSize: 28.sp,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                    child: Column(
+                    SizedBox(height: 28.h),
+                    _buildPhotoSection(),
+                    SizedBox(height: 32.h),
+                    _buildLabeledField(
+                      label: 'FULL NAME',
+                      child: _ProfileTextField(
+                        controller: _fullNameController,
+                        hintText: 'Your full name',
+                      ),
+                    ),
+                    SizedBox(height: 24.h),
+                    _buildLabeledField(
+                      label: 'PROFESSIONAL TITLE / HEADLINE',
+                      child: _ProfileTextField(
+                        controller: _headlineController,
+                        hintText: 'A community for Flutter enthusiasts & developers...',
+                      ),
+                    ),
+                    SizedBox(height: 24.h),
+                    _buildLabeledField(
+                      label: 'BIO',
+                      child: _ProfileTextField(
+                        controller: _bioController,
+                        hintText: 'Tell us about yourself',
+                        maxLines: 5,
+                        minHeight: 120.h,
+                      ),
+                    ),
+                    SizedBox(height: 24.h),
+                    Text(
+                      'SOCIAL LINKS',
+                      style: textStyle_12RegularGrey().copyWith(
+                        fontSize: 11.sp,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.6,
+                        color: AppColors.subtitles,
+                      ),
+                    ),
+                    SizedBox(height: 12.h),
+                    Row(
                       children: [
-                        _buildProfileAvatar(),
-                        SizedBox(height: 10.h),
-                        _buildChangePhotoButton(),
-                        SizedBox(height: 30.h),
-                        _buildLabeledField(
-                          label: 'Full Name',
-                          child: CustomTextField(
-                            text: 'John Doe',
-                            controller: _fullNameController,
+                        Expanded(
+                          child: _ProfileTextField(
+                            controller: _twitterController,
+                            hintText: 'Twitter URL',
+                            keyboardType: TextInputType.url,
                           ),
                         ),
-                        SizedBox(height: 20.h),
-                        _buildLabeledField(
-                          label: 'Username',
-                          child: CustomTextField(
-                            text: '@johndoe_dev',
-                            controller: _usernameController,
+                        SizedBox(width: 12.w),
+                        Expanded(
+                          child: _ProfileTextField(
+                            controller: _linkedinController,
+                            hintText: 'LinkedIn URL',
+                            keyboardType: TextInputType.url,
                           ),
                         ),
-                        SizedBox(height: 20.h),
-                        _buildLabeledField(
-                          label: 'Bio',
-                          child: CustomTextField(
-                            text: 'Tell us about yourself',
-                            controller: _bioController,
-                            maxLines: 5,
-                          ),
-                        ),
-                        SizedBox(height: 40.h),
-                        _buildSaveButton(),
-                        SizedBox(height: 20.h),
                       ],
                     ),
-                  ),
+                    SizedBox(height: 12.h),
+                    _ProfileTextField(
+                      controller: _websiteController,
+                      hintText: 'Personal Website URL',
+                      keyboardType: TextInputType.url,
+                    ),
+                    SizedBox(height: 32.h),
+                    _buildSaveButton(),
+                    SizedBox(height: 32.h),
+                    _buildPreferencesCard(),
+                  ],
                 ),
-        ),
+              ),
       ),
     );
   }
 
-  Widget _buildProfileAvatar() {
+  Widget _buildBackLink() {
+    return GestureDetector(
+      onTap: () => context.go('/profile'),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.arrow_back, size: 18.sp, color: AppColors.linkBlue),
+          SizedBox(width: 6.w),
+          Text(
+            'Back to Profile',
+            style: textStyle_14RegularBlack().copyWith(
+              fontSize: 14.sp,
+              color: AppColors.linkBlue,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPhotoSection() {
     final String? avatarUrl = _profileData?['avatar_url'];
 
-    return Stack(
-      alignment: Alignment.bottomRight,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         CircleAvatar(
-          radius: 60.r,
-          backgroundColor: Colors.grey[300],
+          radius: 44.r,
+          backgroundColor: Colors.grey.shade100,
           backgroundImage: _imageFile != null
               ? FileImage(File(_imageFile!.path))
               : imageProviderFromSource(avatarUrl),
           child: (_imageFile == null && avatarUrl == null)
-              ? Icon(Icons.person, size: 60.r, color: Colors.grey[400])
+              ? Icon(Icons.person, size: 44.r, color: Colors.grey.shade400)
               : null,
         ),
-        GestureDetector(
-          onTap: _pickImage,
-          child: Container(
-            height: 36,
-            width: 36,
-            decoration: BoxDecoration(
-              color: Colors.blue[600],
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 3),
+        SizedBox(width: 16.w),
+        OutlinedButton(
+          onPressed: _pickImage,
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.black,
+            side: BorderSide(color: Colors.grey.shade200),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10.r),
             ),
-            child: const Icon(Icons.camera_alt, color: Colors.white, size: 18),
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+          ),
+          child: Text(
+            'Change\nPhoto',
+            textAlign: TextAlign.center,
+            style: textStyle_14RegularBlack().copyWith(
+              fontSize: 13.sp,
+              fontWeight: FontWeight.w500,
+              height: 1.2,
+            ),
+          ),
+        ),
+        SizedBox(width: 12.w),
+        Expanded(
+          child: Text(
+            'JPG, GIF or PNG. Max size 2MB.',
+            style: textStyle_12RegularGrey().copyWith(
+              fontSize: 12.sp,
+              color: AppColors.subtitles,
+              height: 1.4,
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildChangePhotoButton() {
-    return TextButton(
-      onPressed: _pickImage,
-      style: TextButton.styleFrom(
-        padding: EdgeInsets.zero,
-        minimumSize: Size.zero,
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      ),
-      child: Text(
-        'Change Photo',
-        style: TextStyle(
-          color: Colors.blue[600],
-          fontSize: 15.sp,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLabeledField({required String label, required Widget child}) {
+  Widget _buildLabeledField({
+    required String label,
+    required Widget child,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: TextStyle(
-            fontSize: 14.sp,
+          style: textStyle_12RegularGrey().copyWith(
+            fontSize: 11.sp,
             fontWeight: FontWeight.w600,
-            color: Colors.black87,
+            letterSpacing: 0.6,
+            color: AppColors.subtitles,
           ),
         ),
-        SizedBox(height: 8.h),
+        SizedBox(height: 10.h),
         child,
       ],
     );
   }
 
   Widget _buildSaveButton() {
-    return GradientButton(
-      text: 'Save Changes',
-      onTap: _saveProfile,
-      loading: _isLoading,
-      height: 55.h,
+    return SizedBox(
       width: double.infinity,
+      height: 52.h,
+      child: ElevatedButton(
+        onPressed: _isLoading ? null : _saveProfile,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.black,
+          disabledBackgroundColor: Colors.grey.shade700,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(999),
+          ),
+        ),
+        child: _isLoading
+            ? SizedBox(
+                height: 22.h,
+                width: 22.w,
+                child: const CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2.5,
+                ),
+              )
+            : Text(
+                'Save Changes',
+                style: textStyle_16BoldBlack().copyWith(
+                  fontSize: 15.sp,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+      ),
+    );
+  }
+
+  Widget _buildPreferencesCard() {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(20.w),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Text(
+        'Preferences',
+        style: textStyle_16BoldBlack().copyWith(
+          fontSize: 18.sp,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileTextField extends StatelessWidget {
+  const _ProfileTextField({
+    required this.controller,
+    required this.hintText,
+    this.maxLines = 1,
+    this.minHeight,
+    this.keyboardType = TextInputType.text,
+  });
+
+  final TextEditingController controller;
+  final String hintText;
+  final int maxLines;
+  final double? minHeight;
+  final TextInputType keyboardType;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      constraints: minHeight != null
+          ? BoxConstraints(minHeight: minHeight!)
+          : BoxConstraints(minHeight: 48.h),
+      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 4.h),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10.r),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      alignment: maxLines > 1 ? Alignment.topLeft : Alignment.centerLeft,
+      child: TextField(
+        controller: controller,
+        maxLines: maxLines,
+        keyboardType: keyboardType,
+        style: textStyle_14RegularBlack().copyWith(fontSize: 14.sp),
+        decoration: InputDecoration(
+          hintText: hintText,
+          hintStyle: textStyle_14RegularGrey().copyWith(
+            fontSize: 14.sp,
+            color: AppColors.subtitles,
+          ),
+          border: InputBorder.none,
+          isDense: true,
+          contentPadding: EdgeInsets.symmetric(vertical: 10.h),
+        ),
+      ),
     );
   }
 }

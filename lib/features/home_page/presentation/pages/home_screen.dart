@@ -1,11 +1,9 @@
-import 'package:Readme/core/utils/string_extensions.dart';
 import 'package:Readme/core/utils/text_style.dart';
 import 'package:Readme/features/home_page/domain/entities/blog.dart';
-import 'package:Readme/features/home_page/presentation/utils/blog_category_utils.dart';
+import 'package:Readme/features/home_page/presentation/state/article_category_filters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:Readme/features/home_page/data/datasource/blog_remote_datasource.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:Readme/features/home_page/data/repositories/blog_repository_impl.dart';
@@ -15,6 +13,7 @@ import 'package:Readme/features/home_page/presentation/widgets/blog_card_shimmer
 import 'package:Readme/features/home_page/presentation/widgets/home_articles_section.dart';
 import 'package:Readme/features/home_page/presentation/widgets/home_hero_section.dart';
 
+import '../../../../shared/widgets/category_filter_bottom_sheet.dart';
 import '../../../../shared/widgets/gradient_background.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -28,9 +27,7 @@ class _HomeScreenState extends State<HomeScreen> {
   late final BlogRepository blogRepository;
 
   List<Blog> allBlogs = [];
-  List<String> categories = [];
-  bool _isForYou = true;
-  String? _selectedFilterCategory;
+  ArticleCategoryFilter _selectedFilter = ArticleCategoryFilter.forYou;
   bool _isLoadingBlogs = true;
 
   @override
@@ -53,77 +50,31 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted) return;
     setState(() {
       allBlogs = blogs;
-      categories = extractCategories(blogs);
-      _isForYou = true;
-      _selectedFilterCategory = null;
+      _selectedFilter = ArticleCategoryFilter.forYou;
       _isLoadingBlogs = false;
     });
   }
 
   List<Blog> get filteredBlogs {
-    if (_isForYou || _selectedFilterCategory == null) return allBlogs;
     return allBlogs
-        .where((blog) => blog.category == _selectedFilterCategory)
+        .where(
+          (blog) => matchesArticleCategoryFilter(
+            blogCategory: blog.category,
+            communityId: blog.communityId,
+            filter: _selectedFilter,
+          ),
+        )
         .toList();
   }
 
-  void _showCategoryFilters() {
-    if (categories.isEmpty) return;
-
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(20.w, 12.h, 20.w, 16.h),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40.w,
-                    height: 4.h,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                ),
-                SizedBox(height: 16.h),
-                Text(
-                  'Filter by topic',
-                  style: textStyle_16BoldBlack().copyWith(fontSize: 18.sp),
-                ),
-                SizedBox(height: 16.h),
-                Wrap(
-                  spacing: 8.w,
-                  runSpacing: 8.h,
-                  children: categories.map((category) {
-                    final isSelected = _selectedFilterCategory == category;
-                    return FilterChip(
-                      label: Text(category.smartCategoryCase()),
-                      selected: isSelected,
-                      onSelected: (_) {
-                        setState(() {
-                          _isForYou = false;
-                          _selectedFilterCategory = category;
-                        });
-                        Navigator.pop(context);
-                      },
-                    );
-                  }).toList(),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+  Future<void> _showCategoryFilters() async {
+    final result = await showCategoryFilterBottomSheet(
+      context,
+      selected: _selectedFilter,
     );
+    if (result != null && mounted) {
+      setState(() => _selectedFilter = result);
+    }
   }
 
   @override
@@ -179,13 +130,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     onSearchTap: () => context.go('/search'),
                     onForYouTap: () {
                       setState(() {
-                        _isForYou = true;
-                        _selectedFilterCategory = null;
+                        _selectedFilter = ArticleCategoryFilter.forYou;
                       });
                     },
                     onFiltersTap: _showCategoryFilters,
-                    isForYouSelected: _isForYou,
-                    hasActiveFilter: !_isForYou && _selectedFilterCategory != null,
+                    isForYouSelected: _selectedFilter.isForYou,
+                    hasActiveFilter: !_selectedFilter.isForYou,
                   ),
                 ),
                 if (_isLoadingBlogs)

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 
 import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/app_image.dart';
+import 'package:Readme/core/utils/draft_storage.dart';
 import 'package:Readme/core/utils/text_style.dart';
 import 'package:Readme/features/create_blog_page/presentation/widgets/blog_article_settings_panel.dart';
 import 'package:Readme/features/create_blog_page/presentation/widgets/editor_toolbar.dart';
@@ -131,6 +132,7 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
       _draftContentKey,
       jsonEncode(_controller.document.toDelta().toJson()),
     );
+    await DraftStorage.setSavedAt(DateTime.now());
     if (!mounted) return;
     ScaffoldMessenger.of(
       context,
@@ -139,9 +141,7 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
 
   // ================== CLEAR DRAFT ==================
   Future<void> _clearDraft() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_draftTitleKey);
-    await prefs.remove(_draftContentKey);
+    await DraftStorage.clearDraft();
   }
 
   // ================== COVER IMAGE ==================
