@@ -5,8 +5,10 @@ import 'package:Readme/core/utils/text_style.dart';
 import 'package:Readme/shared/widgets/gradient_background.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:lottie/lottie.dart';
 
 class MyDraftsScreen extends StatefulWidget {
   const MyDraftsScreen({super.key});
@@ -96,11 +98,14 @@ class _MyDraftsScreenState extends State<MyDraftsScreen> {
                               padding: const EdgeInsets.symmetric(vertical: 40.0),
                               child: _EmptyState(onWrite: _openEditor),
                             )
-                            : _DraftListItem(
-                                draft: _draft!,
-                                onTap: _openEditor,
-                                onDelete: _deleteDraft,
-                              ),
+                            : Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                              child: _DraftListItem(
+                                  draft: _draft!,
+                                  onTap: _openEditor,
+                                  onDelete: _deleteDraft,
+                                ),
+                            ),
                   ),
                 ),
               ),
@@ -170,7 +175,7 @@ class _NewDraftButton extends StatelessWidget {
               SizedBox(width: 6.w),
               Text(
                 'New Draft',
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.ptSans(
                   fontSize: 13.sp,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
@@ -202,6 +207,16 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          SizedBox(
+            width: 180.w,
+            height: 180.w,
+            child: Lottie.asset(
+              'assets/lottie/empty.json',
+              fit: BoxFit.contain,
+              repeat: true,
+            ),
+          ),
+          SizedBox(height: 12.h),
           Text(
             "You haven't started any stories yet.",
             textAlign: TextAlign.center,

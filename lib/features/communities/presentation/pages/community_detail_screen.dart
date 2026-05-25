@@ -3,9 +3,11 @@ import 'package:Readme/core/utils/app_image.dart';
 import 'package:Readme/core/utils/text_style.dart';
 import 'package:Readme/features/communities/data/datasource/community_remote_datasource.dart';
 import 'package:Readme/features/communities/data/models/community_article_model.dart';
+import 'package:Readme/features/communities/data/models/community_newsletter_models.dart';
 import 'package:Readme/features/communities/domain/entities/community.dart';
 import 'package:Readme/features/communities/presentation/widgets/community_blog_card.dart';
 import 'package:Readme/features/communities/presentation/widgets/community_detail_shimmer.dart';
+import 'package:Readme/features/communities/presentation/widgets/community_newsletter_subscribe_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
@@ -35,6 +37,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
   String? _userRole;
   bool _isLoading = true;
   String? _error;
+  CommunityNewsletterStats? _newsletterStats;
 
   @override
   void initState() {
@@ -67,12 +70,25 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
       final stats = await _datasource.fetchCommunityStats(community.id);
       final articles = await _datasource.fetchCommunityArticles(community.id);
 
-      final userId = Supabase.instance.client.auth.currentUser?.id;
+      final user = Supabase.instance.client.auth.currentUser;
+      final userId = user?.id;
       var isMember = false;
       String? userRole;
       if (userId != null) {
         isMember = await _datasource.isCommunityMember(community.id, userId);
         userRole = await _datasource.fetchUserRole(community.id, userId);
+      }
+
+      // Newsletter stats are best-effort — if the table doesn't exist yet on
+      // this environment we don't want to break the screen.
+      CommunityNewsletterStats? newsletterStats;
+      try {
+        newsletterStats = await _datasource.fetchNewsletterStats(
+          communityId: community.id,
+          viewerEmail: user?.email,
+        );
+      } catch (_) {
+        newsletterStats = null;
       }
 
       if (!mounted) return;
@@ -82,6 +98,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
         _articles = articles;
         _isMember = isMember;
         _userRole = userRole;
+        _newsletterStats = newsletterStats;
         _isLoading = false;
       });
     } catch (e) {
@@ -120,9 +137,20 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                                 _buildHeader(),
                                 SizedBox(height: 24.h),
                                 _buildActions(context),
-                                SizedBox(height: 28.h),
+                                SizedBox(height: 24.h),
                                 Divider(color: Colors.grey.shade200, height: 1),
                                 SizedBox(height: 24.h),
+                                if (_newsletterStats != null) ...[
+                                  CommunityNewsletterSubscribeCard(
+                                    community: _community!,
+                                    stats: _newsletterStats!,
+                                    datasource: _datasource,
+                                    onSubscribed: _loadDetail,
+                                  ),
+                                  SizedBox(height: 24.h),
+                                  Divider(color: Colors.grey.shade200, height: 1),
+                                  SizedBox(height: 24.h),
+                                ],
                                 Text(
                                   'Published articles',
                                   style: textStyle_16BoldBlack().copyWith(

@@ -96,21 +96,24 @@ class AppRouter{
               ),
             ],
           ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/trending',
-                name: 'trending',
-                builder: (context, state) => const CommunitiesScreen(),
-              ),
-            ],
-          ),
+          // Branch order must match the navbar's `_items` order in
+          // `app_bottom_nav_bar.dart` so tapping a nav item routes to the
+          // matching branch.
           StatefulShellBranch(
             routes: [
               GoRoute(
                 path: '/search',
                 name: 'search',
                 builder: (context, state) => const SearchScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/trending',
+                name: 'trending',
+                builder: (context, state) => const CommunitiesScreen(),
               ),
             ],
           ),

@@ -5,14 +5,17 @@ import 'package:Readme/core/utils/app_image.dart';
 import 'package:Readme/core/utils/text_style.dart';
 import 'package:Readme/features/communities/data/datasource/community_remote_datasource.dart';
 import 'package:Readme/features/communities/data/models/community_dashboard_models.dart';
+import 'package:Readme/features/communities/data/models/community_newsletter_models.dart';
 import 'package:Readme/features/communities/domain/entities/community.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-enum _DashboardTab { drafts, requests, settings, members }
+enum _DashboardTab { drafts, newsletter, requests, settings, members }
 
 class CommunityDashboardScreen extends StatefulWidget {
   const CommunityDashboardScreen({
@@ -32,7 +35,10 @@ class CommunityDashboardScreen extends StatefulWidget {
 class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
   static const _maxImageBytes = 2 * 1024 * 1024;
   static const _roles = ['admin', 'contributor'];
-  static const _requestableRoles = ['contributor', 'admin'];
+  // Only contributor can be self-requested. Admin is granted later via the
+  // Members tab by an existing admin (matches the web RLS policy on
+  // `community_join_requests`).
+  static const _requestableRoles = ['contributor'];
 
   late final CommunityRemoteDatasource _datasource;
   final ImagePicker _picker = ImagePicker();
@@ -60,6 +66,16 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
   bool _isCancellingRequest = false;
   bool _justSentRequest = false;
 
+  // Newsletter
+  static const _maxAttachmentBytes = 20 * 1024 * 1024;
+  final TextEditingController _issueTitleController = TextEditingController();
+  final TextEditingController _issueBodyController = TextEditingController();
+  CommunityNewsletterStats? _newsletterStats;
+  List<CommunityNewsletterIssue> _newsletterIssues = [];
+  String? _newsletterError;
+  PlatformFile? _pickedAttachment;
+  bool _isPublishingIssue = false;
+
   bool _isLoading = true;
   String? _error;
 
@@ -74,6 +90,8 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
   @override
   void dispose() {
     _inviteNameController.dispose();
+    _issueTitleController.dispose();
+    _issueBodyController.dispose();
     super.dispose();
   }
 
@@ -161,12 +179,58 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
     final requests = await _datasource.fetchPendingJoinRequests(communityId);
     final members = await _datasource.fetchCommunityMembers(communityId);
 
+    // Load newsletter pieces independently so a failure on one (e.g. a 0-row
+    // RLS read on issues) doesn't hide the publish form. Capture any error
+    // messages so we can surface them in the UI rather than silently hiding
+    // the feature.
+    CommunityNewsletterStats? newsletterStats;
+    List<CommunityNewsletterIssue> issues = [];
+    String? newsletterError;
+
+    try {
+      newsletterStats = await _datasource.fetchNewsletterStats(
+        communityId: communityId,
+      );
+    } catch (e) {
+      newsletterError = _describeNewsletterError(e);
+    }
+
+    try {
+      issues = await _datasource.fetchNewsletterIssues(communityId);
+    } catch (e) {
+      newsletterError ??= _describeNewsletterError(e);
+    }
+
     if (!mounted) return;
     setState(() {
       _drafts = drafts;
       _requests = requests;
       _members = members;
+      _newsletterStats = newsletterStats ??
+          const CommunityNewsletterStats(
+            subscriberCount: 0,
+            isSubscribed: false,
+          );
+      _newsletterIssues = issues;
+      _newsletterError = newsletterError;
     });
+  }
+
+  String _describeNewsletterError(Object e) {
+    if (e is PostgrestException) {
+      final msg = e.message;
+      final code = e.code;
+      if (code == '42P01' || msg.contains('does not exist')) {
+        return 'Newsletter tables not found on Supabase. '
+            'Expected `community_newsletter_subscribers` and '
+            '`community_newsletter_issues`.';
+      }
+      if (code == '42501') {
+        return 'Row-level security blocked the newsletter read for this user.';
+      }
+      return 'Newsletter load failed: $msg';
+    }
+    return 'Newsletter load failed: $e';
   }
 
   Future<void> _refreshCurrentTab() async {
@@ -327,6 +391,124 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
     }
   }
 
+  // ============================================================
+  // Newsletter publishing
+  // ============================================================
+
+  Future<void> _pickNewsletterAttachment() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['pdf', 'png', 'jpg', 'jpeg'],
+      withData: true,
+    );
+    if (result == null || result.files.isEmpty) return;
+    final file = result.files.first;
+
+    if (file.size > _maxAttachmentBytes) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Attachment must be 20MB or smaller.')),
+        );
+      }
+      return;
+    }
+
+    setState(() => _pickedAttachment = file);
+  }
+
+  void _clearNewsletterAttachment() {
+    setState(() => _pickedAttachment = null);
+  }
+
+  String _contentTypeFor(String name) {
+    final ext = name.split('.').last.toLowerCase();
+    switch (ext) {
+      case 'pdf':
+        return 'application/pdf';
+      case 'png':
+        return 'image/png';
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      default:
+        return 'application/octet-stream';
+    }
+  }
+
+  Future<void> _publishNewsletterIssue() async {
+    if (_community == null) return;
+    final title = _issueTitleController.text.trim();
+    final body = _issueBodyController.text.trim();
+    final attachment = _pickedAttachment;
+
+    if (title.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter an issue title.')),
+      );
+      return;
+    }
+    if (body.isEmpty && attachment == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Add a body or an attachment before publishing.'),
+        ),
+      );
+      return;
+    }
+
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) return;
+
+    setState(() => _isPublishingIssue = true);
+    try {
+      String? attachmentUrl;
+      if (attachment != null) {
+        final bytes = attachment.bytes;
+        if (bytes == null) {
+          throw Exception('Could not read the selected file.');
+        }
+        attachmentUrl = await _datasource.uploadNewsletterAttachment(
+          communityId: _community!.id,
+          bytes: bytes,
+          fileName: attachment.name,
+          contentType: _contentTypeFor(attachment.name),
+        );
+      }
+
+      await _datasource.publishNewsletterIssue(
+        communityId: _community!.id,
+        title: title,
+        body: body,
+        createdBy: userId,
+        attachmentUrl: attachmentUrl,
+      );
+
+      _issueTitleController.clear();
+      _issueBodyController.clear();
+      setState(() => _pickedAttachment = null);
+
+      await _refreshCurrentTab();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Newsletter issue published.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Failed to publish: ${e.toString().replaceFirst('Exception: ', '')}',
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isPublishingIssue = false);
+    }
+  }
+
   Future<void> _submitJoinRequest() async {
     if (_community == null) return;
     final userId = Supabase.instance.client.auth.currentUser?.id;
@@ -356,16 +538,28 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Could not send request: ${e.toString().replaceFirst('Exception: ', '')}',
-            ),
-          ),
+          SnackBar(content: Text(_friendlyJoinRequestError(e))),
         );
       }
     } finally {
       if (mounted) setState(() => _isSubmittingRequest = false);
     }
+  }
+
+  String _friendlyJoinRequestError(Object e) {
+    final code = e is PostgrestException ? e.code : null;
+    final raw = e is PostgrestException
+        ? (e.message)
+        : e.toString().replaceFirst('Exception: ', '');
+
+    if (code == '42501' || raw.toLowerCase().contains('row-level security')) {
+      return "You can't request this role. Ask an existing admin to promote "
+          'you instead.';
+    }
+    if (code == '23505') {
+      return 'You already have a pending request for this community.';
+    }
+    return 'Could not send request: $raw';
   }
 
   Future<void> _cancelJoinRequest() async {
@@ -535,12 +729,23 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
 
   Widget _buildTabBar() {
     const tabs = _DashboardTab.values;
-    const labels = {
-      _DashboardTab.drafts: 'Drafts',
-      _DashboardTab.requests: 'Requests',
-      _DashboardTab.settings: 'Settings',
-      _DashboardTab.members: 'Members',
-    };
+
+    String labelFor(_DashboardTab tab) {
+      switch (tab) {
+        case _DashboardTab.drafts:
+          return 'Drafts';
+        case _DashboardTab.newsletter:
+          return 'Newsletter';
+        case _DashboardTab.requests:
+          return _requests.isEmpty
+              ? 'Requests'
+              : 'Requests (${_requests.length})';
+        case _DashboardTab.settings:
+          return 'Settings';
+        case _DashboardTab.members:
+          return 'Members';
+      }
+    }
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -564,7 +769,7 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
                   ),
                   padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 10.h),
                   child: Text(
-                    labels[tab]!,
+                    labelFor(tab),
                     style: textStyle_14RegularBlack().copyWith(
                       fontSize: 14.sp,
                       fontWeight: FontWeight.w500,
@@ -622,6 +827,8 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
                       .toList(),
                 ),
         );
+      case _DashboardTab.newsletter:
+        return _buildNewsletterTab();
       case _DashboardTab.requests:
         return _DashboardCard(
           title: 'Pending join requests',
@@ -882,6 +1089,256 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
       style: textStyle_14RegularGrey().copyWith(
         fontSize: 14.sp,
         color: AppColors.subtitles,
+      ),
+    );
+  }
+
+  // ============================================================
+  // Newsletter tab content
+  // ============================================================
+  Widget _buildNewsletterTab() {
+    final stats = _newsletterStats ??
+        const CommunityNewsletterStats(
+          subscriberCount: 0,
+          isSubscribed: false,
+        );
+    final attachment = _pickedAttachment;
+    final canPublish = !_isPublishingIssue &&
+        _issueTitleController.text.trim().isNotEmpty &&
+        (_issueBodyController.text.trim().isNotEmpty || attachment != null);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (_newsletterError != null) ...[
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF3E0),
+              borderRadius: BorderRadius.circular(10.r),
+              border: Border.all(color: const Color(0xFFFFD9A8)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.info_outline_rounded,
+                  size: 16.sp,
+                  color: const Color(0xFFB26500),
+                ),
+                SizedBox(width: 8.w),
+                Expanded(
+                  child: Text(
+                    _newsletterError!,
+                    style: textStyle_12RegularGrey().copyWith(
+                      fontSize: 12.sp,
+                      color: const Color(0xFFB26500),
+                      height: 1.45,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 16.h),
+        ],
+        Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(20.w),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12.r),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Monthly newsletter',
+                      style: textStyle_16BoldBlack().copyWith(
+                        fontSize: 18.sp,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '${stats.subscriberCount} ${stats.subscriberCount == 1 ? 'subscriber' : 'subscribers'}',
+                    style: textStyle_12RegularGrey().copyWith(
+                      fontSize: 12.sp,
+                      color: AppColors.subtitles,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 18.h),
+              _newsletterFieldLabel('ISSUE TITLE'),
+              SizedBox(height: 8.h),
+              _newsletterTextField(
+                controller: _issueTitleController,
+                hint: 'e.g. May 2026 — what we shipped',
+                onChanged: (_) => setState(() {}),
+              ),
+              SizedBox(height: 16.h),
+              _newsletterFieldLabel('BODY (OPTIONAL IF A FILE IS ATTACHED)'),
+              SizedBox(height: 8.h),
+              _newsletterTextField(
+                controller: _issueBodyController,
+                hint: "Hi everyone,  Here's what's been happening this month…",
+                maxLines: 6,
+                onChanged: (_) => setState(() {}),
+              ),
+              SizedBox(height: 6.h),
+              Text(
+                "Plain text. Separate paragraphs with a blank line — they'll render as paragraphs on the public archive page.",
+                style: textStyle_12RegularGrey().copyWith(
+                  fontSize: 12.sp,
+                  color: AppColors.subtitles,
+                  height: 1.4,
+                ),
+              ),
+              SizedBox(height: 18.h),
+              _newsletterFieldLabel('ATTACHMENT (OPTIONAL)'),
+              SizedBox(height: 8.h),
+              if (attachment != null)
+                _AttachmentChip(
+                  fileName: attachment.name,
+                  bytes: attachment.size,
+                  onClear: _clearNewsletterAttachment,
+                )
+              else
+                OutlinedButton(
+                  onPressed: _pickNewsletterAttachment,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.black,
+                    side: BorderSide(color: Colors.grey.shade300),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                  child: const Text('Choose PDF or image'),
+                ),
+              SizedBox(height: 6.h),
+              Text(
+                'PDF, PNG or JPEG up to 20 MB. Subscribers and visitors can download it from the newsletter page.',
+                style: textStyle_12RegularGrey().copyWith(
+                  fontSize: 12.sp,
+                  color: AppColors.subtitles,
+                  height: 1.4,
+                ),
+              ),
+              SizedBox(height: 20.h),
+              Align(
+                alignment: Alignment.centerRight,
+                child: ElevatedButton(
+                  onPressed: canPublish ? _publishNewsletterIssue : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.black,
+                    disabledBackgroundColor: Colors.grey.shade400,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 22.w,
+                      vertical: 14.h,
+                    ),
+                  ),
+                  child: _isPublishingIssue
+                      ? SizedBox(
+                          width: 16.w,
+                          height: 16.w,
+                          child: const CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('Publish issue'),
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: 24.h),
+        Text(
+          'Past issues',
+          style: textStyle_16BoldBlack().copyWith(
+            fontSize: 16.sp,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        SizedBox(height: 12.h),
+        if (_newsletterIssues.isEmpty)
+          _emptyText('No newsletters published yet.')
+        else
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: _newsletterIssues
+                .map(
+                  (issue) => Padding(
+                    padding: EdgeInsets.only(bottom: 12.h),
+                    child: _NewsletterIssueRow(issue: issue),
+                  ),
+                )
+                .toList(),
+          ),
+      ],
+    );
+  }
+
+  Widget _newsletterFieldLabel(String text) {
+    return Text(
+      text,
+      style: textStyle_12RegularGrey().copyWith(
+        fontSize: 11.sp,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.6,
+        color: AppColors.subtitles,
+      ),
+    );
+  }
+
+  Widget _newsletterTextField({
+    required TextEditingController controller,
+    required String hint,
+    int maxLines = 1,
+    ValueChanged<String>? onChanged,
+  }) {
+    return TextField(
+      controller: controller,
+      onChanged: onChanged,
+      maxLines: maxLines,
+      style: textStyle_14RegularBlack().copyWith(
+        fontSize: 14.sp,
+        color: AppColors.black,
+        height: 1.45,
+      ),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: textStyle_14RegularGrey().copyWith(
+          fontSize: 13.sp,
+          color: AppColors.subtitles,
+        ),
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: 14.w,
+          vertical: 12.h,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10.r),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10.r),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10.r),
+          borderSide: const BorderSide(color: AppColors.linkBlue),
+        ),
       ),
     );
   }
@@ -1293,6 +1750,157 @@ class _RequestForm extends StatelessWidget {
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AttachmentChip extends StatelessWidget {
+  const _AttachmentChip({
+    required this.fileName,
+    required this.bytes,
+    required this.onClear,
+  });
+
+  final String fileName;
+  final int bytes;
+  final VoidCallback onClear;
+
+  String _formatBytes() {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) {
+      return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    }
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F4F6),
+        borderRadius: BorderRadius.circular(10.r),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.attach_file_rounded,
+            size: 16.sp,
+            color: AppColors.black,
+          ),
+          SizedBox(width: 8.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  fileName,
+                  style: textStyle_14RegularBlack().copyWith(
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: 2.h),
+                Text(
+                  _formatBytes(),
+                  style: textStyle_12RegularGrey().copyWith(
+                    fontSize: 11.sp,
+                    color: AppColors.subtitles,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: onClear,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            icon: Icon(
+              Icons.close_rounded,
+              size: 18.sp,
+              color: AppColors.subtitles,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NewsletterIssueRow extends StatelessWidget {
+  const _NewsletterIssueRow({required this.issue});
+
+  final CommunityNewsletterIssue issue;
+
+  @override
+  Widget build(BuildContext context) {
+    final dateLabel = DateFormat('MMM d, yyyy').format(issue.createdAt);
+
+    return Container(
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            issue.title,
+            style: textStyle_16BoldBlack().copyWith(
+              fontSize: 15.sp,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          SizedBox(height: 4.h),
+          Text(
+            'Published $dateLabel${issue.authorName != null ? ' · ${issue.authorName}' : ''}',
+            style: textStyle_12RegularGrey().copyWith(
+              fontSize: 12.sp,
+              color: AppColors.subtitles,
+            ),
+          ),
+          if (issue.body.trim().isNotEmpty) ...[
+            SizedBox(height: 10.h),
+            Text(
+              issue.body,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: textStyle_14RegularGrey().copyWith(
+                fontSize: 13.sp,
+                color: AppColors.subtitles,
+                height: 1.45,
+              ),
+            ),
+          ],
+          if (issue.attachmentUrl != null) ...[
+            SizedBox(height: 10.h),
+            Row(
+              children: [
+                Icon(
+                  Icons.attach_file_rounded,
+                  size: 14.sp,
+                  color: AppColors.linkBlue,
+                ),
+                SizedBox(width: 4.w),
+                Text(
+                  'Attachment available',
+                  style: textStyle_12RegularGrey().copyWith(
+                    fontSize: 12.sp,
+                    color: AppColors.linkBlue,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

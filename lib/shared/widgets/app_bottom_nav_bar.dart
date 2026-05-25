@@ -1,6 +1,8 @@
 import 'package:Readme/core/utils/app_colors.dart';
+import 'package:Readme/core/utils/assets_path.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class AppBottomNavBar extends StatelessWidget {
   const AppBottomNavBar({
@@ -19,26 +21,10 @@ class AppBottomNavBar extends StatelessWidget {
   final bool isDraftActive;
 
   static const _items = [
-    _NavItemData(
-      label: 'Home',
-      icon: Icons.home_outlined,
-      activeIcon: Icons.home_outlined,
-    ),
-    _NavItemData(
-      label: 'Community',
-      icon: Icons.people_outline_rounded,
-      activeIcon: Icons.people_outline_rounded,
-    ),
-    _NavItemData(
-      label: 'Explore',
-      icon: Icons.search,
-      activeIcon: Icons.search,
-    ),
-    _NavItemData(
-      label: 'Profile',
-      icon: Icons.person_outline_rounded,
-      activeIcon: Icons.person_outline_rounded,
-    ),
+    _NavItemData(label: 'Home', assetPath: AssetsPath.homeNaveIcon),
+    _NavItemData(label: 'Explore', assetPath: AssetsPath.exploreIcon),
+    _NavItemData(label: 'Community', assetPath: AssetsPath.communityIcon),
+    _NavItemData(label: 'Profile', assetPath: AssetsPath.profileNaveIcon),
   ];
 
   int _navIndexFor(int barIndex) {
@@ -49,9 +35,8 @@ class AppBottomNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey.shade200)),
+      decoration: const BoxDecoration(
+        color: Color(0XFFFAFCFF),
       ),
       child: SafeArea(
         top: false,
@@ -105,6 +90,9 @@ class _NavBarSlot extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        hoverColor: Colors.transparent,
         onTap: onTap,
         child: Padding(
           padding: EdgeInsets.symmetric(vertical: 6.h),
@@ -147,34 +135,26 @@ class _DraftCtaButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final color = isActive ? AppColors.linkBlue : AppColors.subtitles;
+
     return _NavBarSlot(
       onTap: onTap,
       label: 'Draft',
-      labelColor: isActive ? AppColors.linkBlue : AppColors.subtitles,
+      labelColor: color,
       icon: Stack(
         clipBehavior: Clip.none,
         alignment: Alignment.center,
         children: [
-          Container(
-            width: 28.w,
-            height: 28.w,
-            decoration: BoxDecoration(
-              color: AppColors.black,
-              shape: BoxShape.circle,
-              border: isActive
-                  ? Border.all(color: AppColors.linkBlue, width: 2)
-                  : null,
-            ),
-            child: Icon(
-              Icons.edit_outlined,
-              size: 16.sp,
-              color: Colors.white,
-            ),
+          SvgPicture.asset(
+            AssetsPath.draftIcon,
+            width: 22.sp,
+            height: 22.sp,
+            colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
           ),
           if (hasDraft)
             Positioned(
-              top: -1,
-              right: -1,
+              top: -2,
+              right: -4,
               child: Container(
                 width: 8.w,
                 height: 8.w,
@@ -194,13 +174,11 @@ class _DraftCtaButton extends StatelessWidget {
 class _NavItemData {
   const _NavItemData({
     required this.label,
-    required this.icon,
-    required this.activeIcon,
+    required this.assetPath,
   });
 
   final String label;
-  final IconData icon;
-  final IconData activeIcon;
+  final String assetPath;
 }
 
 class _NavItem extends StatelessWidget {
@@ -222,10 +200,11 @@ class _NavItem extends StatelessWidget {
       onTap: onTap,
       label: data.label,
       labelColor: color,
-      icon: Icon(
-        isSelected ? data.activeIcon : data.icon,
-        size: 24.sp,
-        color: color,
+      icon: SvgPicture.asset(
+        data.assetPath,
+        width: 25.sp,
+        height: 25.sp,
+        colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
       ),
     );
   }

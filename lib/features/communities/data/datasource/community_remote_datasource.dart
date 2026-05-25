@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/community_article_model.dart';
 import '../models/community_dashboard_models.dart';
 import '../models/community_model.dart';
+import '../models/community_newsletter_models.dart';
 
 class CommunityRemoteDatasource {
   CommunityRemoteDatasource(this.client);
@@ -336,5 +337,136 @@ class CommunityRemoteDatasource {
       'logo_url': logoUrl,
       'updated_at': DateTime.now().toIso8601String(),
     }).eq('id', communityId);
+  }
+
+  // ============================================================
+  // Newsletter
+  // Schema assumptions (adjust to match web):
+  //   community_newsletter_subscribers (id, community_id, email, user_id?,
+  //                                     created_at, unique(community_id,email))
+  //   community_newsletter_issues (id, community_id, title, body,
+  //                                attachment_url?, created_by, created_at)
+  //   storage bucket: 'newsletter-attachments'
+  // ============================================================
+
+  Future<CommunityNewsletterStats> fetchNewsletterStats({
+    required String communityId,
+    String? viewerEmail,
+  }) async {
+    final subs = await client
+        .from('community_newsletter_subscribers')
+        .select('id, email')
+        .eq('community_id', communityId);
+
+    final list = subs as List;
+    final isSubscribed = viewerEmail == null
+        ? false
+        : list.any((row) =>
+            (row['email'] as String?)?.toLowerCase() ==
+            viewerEmail.toLowerCase());
+
+    return CommunityNewsletterStats(
+      subscriberCount: list.length,
+      isSubscribed: isSubscribed,
+    );
+  }
+
+  Future<void> subscribeToNewsletter({
+    required String communityId,
+    required String email,
+    String? userId,
+  }) async {
+    final normalized = email.trim().toLowerCase();
+    if (normalized.isEmpty) {
+      throw Exception('Please enter a valid email.');
+    }
+
+    final existing = await client
+        .from('community_newsletter_subscribers')
+        .select('id')
+        .eq('community_id', communityId)
+        .eq('email', normalized)
+        .maybeSingle();
+
+    if (existing != null) {
+      throw Exception('You are already subscribed.');
+    }
+
+    await client.from('community_newsletter_subscribers').insert({
+      'community_id': communityId,
+      'email': normalized,
+      if (userId != null) 'user_id': userId,
+    });
+  }
+
+  Future<List<CommunityNewsletterIssue>> fetchNewsletterIssues(
+    String communityId,
+  ) async {
+    final response = await client
+        .from('community_newsletter_issues')
+        .select('''
+          id,
+          community_id,
+          title,
+          body,
+          attachment_url,
+          created_at,
+          profiles:created_by (name)
+        ''')
+        .eq('community_id', communityId)
+        .order('created_at', ascending: false);
+
+    return response
+        .map<CommunityNewsletterIssue>(
+          (row) => CommunityNewsletterIssue.fromJson(row),
+        )
+        .toList();
+  }
+
+  Future<String> uploadNewsletterAttachment({
+    required String communityId,
+    required Uint8List bytes,
+    required String fileName,
+    required String contentType,
+  }) async {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final safeName = fileName.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '_');
+    final path = '$communityId/$timestamp-$safeName';
+    await client.storage.from('newsletter-attachments').uploadBinary(
+          path,
+          bytes,
+          fileOptions: FileOptions(upsert: true, contentType: contentType),
+        );
+    return client.storage.from('newsletter-attachments').getPublicUrl(path);
+  }
+
+  Future<CommunityNewsletterIssue> publishNewsletterIssue({
+    required String communityId,
+    required String title,
+    required String body,
+    required String createdBy,
+    String? attachmentUrl,
+  }) async {
+    final inserted = await client
+        .from('community_newsletter_issues')
+        .insert({
+          'community_id': communityId,
+          'title': title,
+          'body': body,
+          'attachment_url': attachmentUrl,
+          'created_by': createdBy,
+        })
+        .select('''
+          id,
+          community_id,
+          title,
+          body,
+          attachment_url,
+          created_at,
+          profiles:created_by (name)
+        ''')
+        .single();
+
+    return CommunityNewsletterIssue.fromJson(inserted);
   }
 }
