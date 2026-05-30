@@ -1,6 +1,7 @@
 import 'package:Readme/core/network/supabase_connectivity.dart';
 import 'package:Readme/core/router/routes.dart';
 import 'package:Readme/core/secrets/app_secrets.dart';
+import 'package:Readme/core/updater/app_upgrader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_quill/flutter_quill.dart';
@@ -71,7 +72,7 @@ class MyApp extends StatelessWidget {
       builder: (context, child) {
         return MaterialApp.router(
           debugShowCheckedModeBanner: false,
-          title: 'Flutter Demo',
+          title: 'Readme',
           theme: ThemeData(
             textTheme: GoogleFonts.poppinsTextTheme(),
             colorScheme: ColorScheme.fromSeed(seedColor: Colors.white),
@@ -83,6 +84,11 @@ class MyApp extends StatelessWidget {
             Locale('en'),
           ],
           routerConfig: AppRouter.router,
+          builder: (context, child) {
+            return AppUpgrader(
+              child: child ?? const SizedBox.shrink(),
+            );
+          },
         );
       },
     );

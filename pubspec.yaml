@@ -57,6 +57,7 @@ dependencies:
   html_unescape: ^2.0.0
   vsc_quill_delta_to_html: ^1.0.5
   shimmer: ^3.0.0
+  upgrader: ^13.4.0
 
 dev_dependencies:
   flutter_test:
