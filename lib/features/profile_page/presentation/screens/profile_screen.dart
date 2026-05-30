@@ -8,6 +8,7 @@ import 'package:Readme/features/profile_page/presentation/widgets/profile_blog_c
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../shared/widgets/gradient_background.dart';
@@ -29,12 +30,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Map<String, dynamic>? _profileData;
   List<Blog> _publishedBlogs = [];
   bool _isLoading = true;
+  String? _appVersionLabel;
 
   @override
   void initState() {
     super.initState();
     _user = _supabase.auth.currentUser;
+    _loadAppVersion();
     _loadProfile();
+  }
+
+  Future<void> _loadAppVersion() async {
+    final info = await PackageInfo.fromPlatform();
+    if (!mounted) return;
+    setState(() {
+      _appVersionLabel = '${info.version} (${info.buildNumber})';
+    });
   }
 
   Future<void> _loadProfile() async {
@@ -106,6 +117,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Divider(color: Colors.grey.shade200, height: 1),
                         SizedBox(height: 24.h),
                         _buildPublishedSection(),
+                        SizedBox(height: 32.h),
+                        _buildVersionFooter(),
                       ],
                     ),
                   ),
@@ -211,6 +224,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
             },
           ),
       ],
+    );
+  }
+
+  Widget _buildVersionFooter() {
+    final label = _appVersionLabel;
+    if (label == null) return const SizedBox.shrink();
+
+    return Center(
+      child: Text(
+        'Version $label',
+        style: textStyle_12RegularGrey().copyWith(
+          fontSize: 12.sp,
+          color: AppColors.subtitles,
+        ),
+      ),
     );
   }
 }
