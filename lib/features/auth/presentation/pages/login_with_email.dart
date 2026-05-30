@@ -19,6 +19,12 @@ class LoginWithEmail extends StatefulWidget {
 class _LoginWithEmailState extends State<LoginWithEmail> {
   TextEditingController _emailController = TextEditingController();
   TextEditingController _passwordController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  final _emailFocusNode = FocusNode();
+  final _passwordFocusNode = FocusNode();
+  final _emailFieldKey = GlobalKey();
+  final _passwordFieldKey = GlobalKey();
+
   bool loading = false;
   final supabase = Supabase.instance.client;
 
@@ -45,12 +51,12 @@ class _LoginWithEmailState extends State<LoginWithEmail> {
     }
   }
 
-  // @override
-  // void initState() {
-  //   super.initState();
-  //   _emailController = TextEditingController();
-  //   _passwordController = TextEditingController();
-  // }
+  @override
+  void initState() {
+    super.initState();
+    _emailController = TextEditingController();
+    _passwordController = TextEditingController();
+  }
 
   @override
   void dispose() {
@@ -73,7 +79,7 @@ class _LoginWithEmailState extends State<LoginWithEmail> {
               _buildHeader(),
               SizedBox(height: 32.h),
               _buildEmailField(),
-              SizedBox(height: 16.h),
+              SizedBox(height: 12.h),
               _buildPasswordField(),
               SizedBox(height: 12.h),
               _buildForgotPasswordLink(),
@@ -107,25 +113,42 @@ class _LoginWithEmailState extends State<LoginWithEmail> {
   }
 
   Widget _buildEmailField() {
-    return CustomTextField(
-      text: "Email Address/Username",
-      hintFontSize: 16,
-      controller: _emailController,
-      keyboardType: TextInputType.emailAddress,
-      isPassword: false,
+    return Container(
+      key: _emailFieldKey,
+      child: CustomTextField(
+        text: "Email Address/Username",
+        showBorder: _emailFocusNode.hasFocus,
+        borderColor: _emailFocusNode.hasFocus
+            ? Colors.blue
+            : Colors.transparent,
+        fillColor: _emailFocusNode.hasFocus
+            ? Colors.transparent
+            : const Color(0xFFF6F6F6),
+        controller: _emailController,
+        focusNode: _emailFocusNode,
+        keyboardType: TextInputType.emailAddress,
+      ),
     );
   }
 
   Widget _buildPasswordField() {
-    return CustomTextField(
-      text: "Password",
-      hintFontSize: 16,
-      controller: _passwordController,
-      isPassword: true,
-      enablePasswordToggle: true,
+    return Container(
+      key: _passwordFieldKey,
+      child: CustomTextField(
+        showBorder: _passwordFocusNode.hasFocus,
+        fillColor: _passwordFocusNode.hasFocus
+            ? Colors.transparent
+            : const Color(0xFFF6F6F6),
+        borderColor: _passwordFocusNode.hasFocus
+            ? Colors.blue
+            : Colors.transparent,
+        text: "Password",
+        controller: _passwordController,
+        focusNode: _passwordFocusNode,
+        isPassword: true,
+      ),
     );
   }
-
   Widget _buildForgotPasswordLink() {
     return Align(
       alignment: Alignment.centerRight,

@@ -15,7 +15,37 @@ import 'package:Readme/features/communities/presentation/pages/community_detail_
 import 'package:Readme/features/communities/domain/entities/community.dart';
 import 'package:Readme/features/blog_detail/presentation/pages/blog_detail_screen.dart';
 import 'package:Readme/features/home_page/domain/entities/blog.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
+CustomTransitionPage<void> _fadeSlideTransitionPage({
+  required LocalKey key,
+  required Widget child,
+  Duration duration = const Duration(milliseconds: 550),
+}) {
+  return CustomTransitionPage<void>(
+    key: key,
+    transitionDuration: duration,
+    reverseTransitionDuration: const Duration(milliseconds: 400),
+    child: child,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      final curved = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+      );
+      return FadeTransition(
+        opacity: curved,
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 0.012),
+            end: Offset.zero,
+          ).animate(curved),
+          child: child,
+        ),
+      );
+    },
+  );
+}
 
 class AppRouter{
   static final GoRouter router = GoRouter(
@@ -83,8 +113,11 @@ class AppRouter{
       // data fetched in initState isn't reloaded every time the user toggles
       // bottom-nav tabs.
       StatefulShellRoute.indexedStack(
-        builder: (context, state, navigationShell) {
-          return MainActionScreen(navigationShell: navigationShell);
+        pageBuilder: (context, state, navigationShell) {
+          return _fadeSlideTransitionPage(
+            key: state.pageKey,
+            child: MainActionScreen(navigationShell: navigationShell),
+          );
         },
         branches: [
           StatefulShellBranch(

@@ -2,6 +2,7 @@ import 'package:Readme/core/utils/text_style.dart';
 import 'package:Readme/features/home_page/domain/entities/blog.dart';
 import 'package:Readme/features/home_page/presentation/state/article_category_filters.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:Readme/features/home_page/data/datasource/blog_remote_datasource.dart';
 import 'package:go_router/go_router.dart';
@@ -25,10 +26,14 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late final BlogRepository blogRepository;
+  final ScrollController _scrollController = ScrollController();
 
   List<Blog> allBlogs = [];
   ArticleCategoryFilter _selectedFilter = ArticleCategoryFilter.forYou;
   bool _isLoadingBlogs = true;
+  double _scrollOffset = 0;
+
+  static const double _statusBarFadeDistance = 72;
 
   @override
   void initState() {
@@ -38,8 +43,27 @@ class _HomeScreenState extends State<HomeScreen> {
       BlogRemoteDatasource(Supabase.instance.client),
     );
 
+    _scrollController.addListener(_onScroll);
     _loadBlogs();
   }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    final offset = _scrollController.hasClients
+        ? _scrollController.offset
+        : 0.0;
+    if ((offset - _scrollOffset).abs() < 0.5) return;
+    setState(() => _scrollOffset = offset);
+  }
+
+  double get _statusBarBlend =>
+      (_scrollOffset / _statusBarFadeDistance).clamp(0.0, 1.0);
 
   Future<void> _loadBlogs() async {
     if (!mounted) return;
@@ -79,7 +103,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return GradientBackground(
+    final topInset = MediaQuery.paddingOf(context).top;
+    // final blend = _statusBarBlend;
+    final statusBarStyle = SystemUiOverlayStyle(
+      statusBarColor: Colors.white,
+      statusBarIconBrightness: Brightness.dark,
+      // statusBarBrightness: blend > 0.5 ? Brightness.light : Brightness.dark,
+    );
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: statusBarStyle,
+      child: GradientBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
         // appBar: AppBar(
@@ -111,11 +145,15 @@ class _HomeScreenState extends State<HomeScreen> {
         // ),
         extendBody: true,
         extendBodyBehindAppBar: true,
-        body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10),
-            child: CustomScrollView(
-              slivers: [
+        body: Stack(
+          children: [
+            SafeArea(
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20.0, vertical: 0),
+                child: CustomScrollView(
+                  controller: _scrollController,
+                  slivers: [
                 SliverToBoxAdapter(
                   child: SizedBox(height: 40.h),
                 ),
@@ -163,11 +201,25 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                   ),
                 SliverToBoxAdapter(child: SizedBox(height: 80.h)),
-              ],
+                  ],
+                ),
+              ),
             ),
-          ),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: topInset,
+              child: IgnorePointer(
+                // child: ColoredBox(
+                //   color: Colors.white.withValues(alpha: blend),
+                // ),
+              ),
+            ),
+          ],
         ),
       ),
+    ),
     );
   }
 }

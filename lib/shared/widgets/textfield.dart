@@ -8,27 +8,38 @@ class CustomTextField extends StatefulWidget {
 
   final TextEditingController? controller;
   final bool isPassword;
+  final bool showBorder;
   final bool enablePasswordToggle;
   final TextInputType keyboardType;
   final TextInputAction textInputAction;
   final int maxLines;
   final Color? hintColor;
+  final Color? fillColor;
+  final Color? borderColor;
   final double? hintFontSize;
   final FontWeight hintFontWeight;
+  final String? Function(String?)? validator;
+  final FocusNode? focusNode;
+  final bool showTickIcon;
 
-  const CustomTextField({
-    super.key,
-    required this.text,
-    this.controller,
-    this.isPassword = false,
-    this.enablePasswordToggle = true,
-    this.keyboardType = TextInputType.text,
-    this.textInputAction = TextInputAction.next,
-    this.maxLines = 1,
-    this.hintColor,
-    this.hintFontSize,
-    this.hintFontWeight = FontWeight.w400,
-  });
+  const CustomTextField(
+      {super.key,
+        required this.text,
+        this.controller,
+        this.focusNode,
+        this.isPassword = false,
+        this.enablePasswordToggle = true,
+        this.keyboardType = TextInputType.text,
+        this.textInputAction = TextInputAction.next,
+        this.maxLines = 1,
+        this.hintColor,
+        this.borderColor,
+        this.fillColor = const Color(0xFFF6F6F6),
+        this.validator,
+        this.showBorder = false,
+        this.hintFontSize,
+        this.hintFontWeight = FontWeight.w400,
+        this.showTickIcon = false});
 
   @override
   State<CustomTextField> createState() => _CustomTextFieldState();
@@ -56,37 +67,49 @@ class _CustomTextFieldState extends State<CustomTextField> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 56.h,
+      height: 56,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: const Color(0xFFF6F6F6),
-        borderRadius: BorderRadius.circular(16),
+        color: widget.fillColor,
+        border: widget.showBorder
+            ? Border.all(color: widget.borderColor ?? const Color(0xFFF6F6F6))
+            : null,
+        borderRadius: BorderRadius.circular(12),
       ),
       alignment: Alignment.center,
-      child: TextField(
+      child: TextFormField(
+        style: textStyle_14MediumGreyHintStyle().copyWith(color: Colors.black),
         controller: _internalController,
+        focusNode: widget.focusNode,
         obscureText: widget.isPassword && _obscureText,
         keyboardType: widget.keyboardType,
         textInputAction: widget.textInputAction,
         maxLines: widget.isPassword ? 1 : widget.maxLines,
+        validator: widget.validator,
         decoration: InputDecoration(
           border: InputBorder.none,
           hintText: widget.text,
           hintStyle: textStyle_14MediumGreyHintStyle(),
+          contentPadding:
+          const EdgeInsets.symmetric(horizontal: 0, vertical: 18),
           suffixIcon: widget.isPassword && widget.enablePasswordToggle
               ? IconButton(
-                  icon: Icon(
-                    _obscureText
-                        ? Icons.visibility_off_outlined
-                        : Icons.visibility_outlined,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _obscureText = !_obscureText;
-                    });
-                  },
-                )
-              : null,
+            icon: Icon(
+              _obscureText
+                  ? Icons.visibility_off_outlined
+                  : Icons.visibility_outlined,
+            ),
+            onPressed: () {
+              setState(() {
+                _obscureText = !_obscureText;
+              });
+            },
+          )
+              : widget.showTickIcon
+              ? Padding(
+            padding: const EdgeInsets.all(12.0),
+          )
+              : const SizedBox.shrink(),
         ),
       ),
     );
