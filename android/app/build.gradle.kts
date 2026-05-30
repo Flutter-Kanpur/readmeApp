@@ -1,8 +1,25 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+val keystorePropertiesFile = rootProject.file("key.properties")
+val keystoreProperties = Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+
+fun signingProperty(
+    codemagicEnv: String,
+    keyPropertiesKey: String,
+): String? {
+    return System.getenv(codemagicEnv)
+        ?: keystoreProperties.getProperty(keyPropertiesKey)
 }
 
 android {
@@ -19,11 +36,28 @@ android {
         jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
+    signingConfigs {
+        create("release") {
+            val cmKeystorePath = System.getenv("CM_KEYSTORE_PATH")
+            val propertiesStoreFile = keystoreProperties.getProperty("storeFile")
+
+            val resolvedStoreFile = when {
+                !cmKeystorePath.isNullOrBlank() -> file(cmKeystorePath)
+                !propertiesStoreFile.isNullOrBlank() -> rootProject.file(propertiesStoreFile)
+                else -> null
+            }
+
+            if (resolvedStoreFile != null) {
+                storeFile = resolvedStoreFile
+                storePassword = signingProperty("CM_KEYSTORE_PASSWORD", "storePassword")
+                keyAlias = signingProperty("CM_KEY_ALIAS", "keyAlias")
+                keyPassword = signingProperty("CM_KEY_PASSWORD", "keyPassword")
+            }
+        }
+    }
+
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.flutterkanpur.readme"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -32,9 +66,15 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            val releaseSigning = signingConfigs.getByName("release")
+            signingConfig = releaseSigning.takeIf { it.storeFile?.exists() == true }
+                ?: error(
+                    """
+                    Release signing is not configured.
+                    - Local: create android/key.properties (see key.properties.example)
+                    - Codemagic: enable Android code signing in app settings
+                    """.trimIndent(),
+                )
         }
     }
 }
