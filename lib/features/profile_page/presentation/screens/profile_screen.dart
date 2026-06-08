@@ -4,7 +4,9 @@ import 'package:Readme/core/utils/text_style.dart';
 import 'package:Readme/features/home_page/data/datasource/blog_remote_datasource.dart';
 import 'package:Readme/features/home_page/data/repositories/blog_repository_impl.dart';
 import 'package:Readme/features/home_page/domain/entities/blog.dart';
+import 'package:Readme/features/profile_page/data/datasource/profile_remote_datasource.dart';
 import 'package:Readme/features/profile_page/presentation/widgets/profile_blog_card.dart';
+import 'package:Readme/features/profile_page/presentation/widgets/user_stats_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
@@ -26,9 +28,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     BlogRemoteDatasource(_supabase),
   );
 
+  late final _profileDatasource = ProfileRemoteDatasource(_supabase);
+
   User? _user;
   Map<String, dynamic>? _profileData;
   List<Blog> _publishedBlogs = [];
+  UserFollowStats _followStats = const UserFollowStats(
+    followers: 0,
+    following: 0,
+  );
   bool _isLoading = true;
   String? _appVersionLabel;
 
@@ -62,11 +70,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
           .maybeSingle();
       final publishedBlogs =
           await _blogRepository.getBlogsByAuthor(_user!.id);
+      final followStats = await _profileDatasource.fetchFollowStats(_user!.id);
 
       if (!mounted) return;
       setState(() {
         _profileData = profileData;
         _publishedBlogs = publishedBlogs;
+        _followStats = followStats;
         _isLoading = false;
       });
     } catch (e) {
@@ -95,6 +105,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String? get _avatarUrl =>
       _profileData?['avatar_url'] ?? _user?.userMetadata?['avatar_url'];
 
+  DateTime? get _memberSince {
+    final createdAt = _profileData?['created_at'];
+    if (createdAt == null) return null;
+    if (createdAt is DateTime) return createdAt;
+    return DateTime.tryParse(createdAt.toString());
+  }
+
   @override
   Widget build(BuildContext context) {
     return GradientBackground(
@@ -117,6 +134,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Divider(color: Colors.grey.shade200, height: 1),
                         SizedBox(height: 24.h),
                         _buildPublishedSection(),
+                        SizedBox(height: 32.h),
+                        UserStatsCard(
+                          memberSince: _memberSince,
+                          followers: _followStats.followers,
+                          following: _followStats.following,
+                          totalArticles: _publishedBlogs.length,
+                        ),
                         SizedBox(height: 32.h),
                         _buildVersionFooter(),
                       ],
@@ -155,7 +179,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           style: textStyle_14RegularGrey().copyWith(
             fontSize: 14.sp,
             height: 1.5,
-            color: AppColors.subtitles,
+            color: AppColors.greyText,
           ),
         ),
         SizedBox(height: 20.h),
@@ -165,7 +189,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             foregroundColor: AppColors.black,
             side: BorderSide(color: Colors.grey.shade200),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12.r),
+              borderRadius: BorderRadius.circular(100.r),
             ),
             padding: EdgeInsets.symmetric(horizontal: 28.w, vertical: 12.h),
           ),

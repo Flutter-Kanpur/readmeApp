@@ -4,6 +4,7 @@ import 'package:Readme/features/auth/presentation/pages/signup_screen.dart';
 import 'package:Readme/features/create_blog_page/presentation/pages/create_blog_screen.dart';
 import 'package:Readme/features/create_blog_page/presentation/pages/my_drafts_screen.dart';
 import 'package:Readme/features/home_page/presentation/pages/home_screen.dart';
+import 'package:Readme/features/profile_page/presentation/screens/author_profile_screen.dart';
 import 'package:Readme/features/profile_page/presentation/screens/edit_profile_screen.dart';
 import 'package:Readme/features/profile_page/presentation/screens/profile_screen.dart';
 import 'package:Readme/features/splash/presentation/pages/splash_screen.dart';
@@ -76,6 +77,14 @@ class AppRouter{
         path: '/edit_profile',
         name: 'edit_profile',
         builder: (context, state) => const EditProfileScreen(),
+      ),
+      GoRoute(
+        path: '/profile/:userId',
+        name: 'author_profile',
+        builder: (context, state) {
+          final userId = state.pathParameters['userId']!;
+          return AuthorProfileScreen(userId: userId);
+        },
       ),
       GoRoute(
         path: '/create',

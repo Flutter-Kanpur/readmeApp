@@ -46,10 +46,67 @@ class CommunityRemoteDatasource {
         .eq('community_id', communityId)
         .eq('is_published', true);
 
+    var followerCount = 0;
+    try {
+      followerCount = await fetchCommunityFollowerCount(communityId);
+    } catch (_) {
+      followerCount = 0;
+    }
+
     return CommunityStats(
       memberCount: (members as List).length,
+      followerCount: followerCount,
       publishedCount: (blogs as List).length,
     );
+  }
+
+  Future<int> fetchCommunityFollowerCount(String communityId) async {
+    final response = await client
+        .from('community_followers')
+        .select('id')
+        .eq('community_id', communityId);
+
+    return (response as List).length;
+  }
+
+  Future<bool> isFollowingCommunity({
+    required String communityId,
+    required String userId,
+  }) async {
+    final response = await client
+        .from('community_followers')
+        .select('id')
+        .eq('community_id', communityId)
+        .eq('follower_id', userId)
+        .maybeSingle();
+
+    return response != null;
+  }
+
+  Future<void> followCommunity({
+    required String communityId,
+    required String userId,
+  }) async {
+    try {
+      await client.from('community_followers').insert({
+        'community_id': communityId,
+        'follower_id': userId,
+      });
+    } on PostgrestException catch (e) {
+      if (e.code == '23505') return;
+      rethrow;
+    }
+  }
+
+  Future<void> unfollowCommunity({
+    required String communityId,
+    required String userId,
+  }) async {
+    await client
+        .from('community_followers')
+        .delete()
+        .eq('community_id', communityId)
+        .eq('follower_id', userId);
   }
 
   Future<List<CommunityArticle>> fetchCommunityArticles(
@@ -59,6 +116,7 @@ class CommunityRemoteDatasource {
         .from('blogs')
         .select('''
       blog_id,
+      author_id,
       title,
       content,
       cover_image,
@@ -66,6 +124,7 @@ class CommunityRemoteDatasource {
       category,
       is_published,
       profiles!inner (
+        id,
         name,
         avatar_url
       ),

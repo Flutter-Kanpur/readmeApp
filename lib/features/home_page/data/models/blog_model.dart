@@ -22,10 +22,13 @@ class BlogModel extends Blog {
     Map<String, dynamic> json, {
     List<String>? imageUrls,
   }) {
+    final authorId = json['author_id'] as String?;
     final profile = json['profiles'];
+    final profileId = profile?['id'] as String?;
     final community = json['communities'] as Map<String, dynamic>?;
 
     final primaryAuthor = Author(
+      id: authorId ?? profileId,
       name: profile?['name'] ?? 'Unknown',
       avatarUrl: profile?['avatar_url'],
     );
@@ -35,6 +38,7 @@ class BlogModel extends Blog {
           final coProfile = entry['profiles'] as Map<String, dynamic>?;
           if (coProfile == null) return null;
           return Author(
+            id: entry['user_id'] as String? ?? coProfile['id'] as String?,
             name: coProfile['name'] as String? ?? 'Unknown',
             avatarUrl: coProfile['avatar_url'] as String?,
           );

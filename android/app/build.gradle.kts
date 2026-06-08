@@ -67,15 +67,28 @@ android {
     buildTypes {
         release {
             val releaseSigning = signingConfigs.getByName("release")
-            signingConfig = releaseSigning.takeIf { it.storeFile?.exists() == true }
-                ?: error(
-                    """
-                    Release signing is not configured.
-                    - Local: create android/key.properties (see key.properties.example)
-                    - Codemagic: enable Android code signing in app settings
-                    """.trimIndent(),
-                )
+            if (releaseSigning.storeFile?.exists() == true) {
+                signingConfig = releaseSigning
+            }
         }
+    }
+}
+
+gradle.taskGraph.whenReady {
+    val isReleaseBuild = allTasks.any { task ->
+        task.name.contains("Release", ignoreCase = true)
+    }
+    if (!isReleaseBuild) return@whenReady
+
+    val releaseSigning = android.signingConfigs.getByName("release")
+    if (releaseSigning.storeFile?.exists() != true) {
+        error(
+            """
+            Release signing is not configured.
+            - Local: create android/key.properties (see key.properties.example)
+            - Codemagic: enable Android code signing in app settings
+            """.trimIndent(),
+        )
     }
 }
 

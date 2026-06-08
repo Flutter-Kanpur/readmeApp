@@ -32,21 +32,23 @@ class Blog {
   /// Primary author followed by all unique co-authors. Useful for cards that
   /// render a stacked avatar group / combined name list.
   List<Author> get allAuthors {
-    if (coauthors.isEmpty) return [author];
-    final seen = <String>{author.name};
-    final unique = <Author>[author];
-    for (final co in coauthors) {
-      if (seen.add(co.name)) unique.add(co);
+    final seen = <String>{};
+    final unique = <Author>[];
+    for (final author in [author, ...coauthors]) {
+      final key = author.id ?? author.name;
+      if (seen.add(key)) unique.add(author);
     }
     return unique;
   }
 }
 
 class Author {
+  final String? id;
   final String name;
   final String? avatarUrl;
 
   const Author({
+    this.id,
     required this.name,
     this.avatarUrl,
   });

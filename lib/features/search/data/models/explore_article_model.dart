@@ -15,9 +15,12 @@ class ExploreArticle {
   final String? communityLogoUrl;
 
   factory ExploreArticle.fromJson(Map<String, dynamic> json) {
+    final authorId = json['author_id'] as String?;
     final profile = json['profiles'] as Map<String, dynamic>?;
+    final profileId = profile?['id'] as String?;
     final community = json['communities'] as Map<String, dynamic>?;
     final primaryAuthor = Author(
+      id: authorId ?? profileId,
       name: profile?['name'] as String? ?? 'Unknown',
       avatarUrl: profile?['avatar_url'] as String?,
     );
@@ -25,11 +28,14 @@ class ExploreArticle {
     final coauthors = (json['blog_coauthors'] as List? ?? [])
         .map((entry) {
           final coProfile = entry['profiles'] as Map<String, dynamic>?;
+          if (coProfile == null) return null;
           return Author(
-            name: coProfile?['name'] as String? ?? 'Unknown',
-            avatarUrl: coProfile?['avatar_url'] as String?,
+            id: entry['user_id'] as String? ?? coProfile['id'] as String?,
+            name: coProfile['name'] as String? ?? 'Unknown',
+            avatarUrl: coProfile['avatar_url'] as String?,
           );
         })
+        .whereType<Author>()
         .where((author) => author.name != primaryAuthor.name)
         .toList();
 

@@ -9,6 +9,7 @@ class BlogRemoteDatasource {
 
   static const String _blogSelectWithAuthors = '''
       blog_id,
+      author_id,
       title,
       content,
       cover_image,
@@ -17,6 +18,7 @@ class BlogRemoteDatasource {
       is_published,
       community_id,
       profiles!inner (
+        id,
         name,
         avatar_url
       ),
@@ -74,6 +76,7 @@ class BlogRemoteDatasource {
         .from('blogs')
         .select('''
       blog_id,
+      author_id,
       title,
       content,
       cover_image,
@@ -82,6 +85,7 @@ class BlogRemoteDatasource {
       is_published,
       community_id,
       profiles!inner (
+        id,
         name,
         avatar_url
       ),

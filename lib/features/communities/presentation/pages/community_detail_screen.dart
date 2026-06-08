@@ -35,6 +35,9 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
   List<CommunityArticle> _articles = [];
   bool _isMember = false;
   String? _userRole;
+  bool _isFollowing = false;
+  bool _followActionLoading = false;
+  bool _followAvailable = true;
   bool _isLoading = true;
   String? _error;
   CommunityNewsletterStats? _newsletterStats;
@@ -74,9 +77,19 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
       final userId = user?.id;
       var isMember = false;
       String? userRole;
+      var isFollowing = false;
+      var followAvailable = true;
       if (userId != null) {
         isMember = await _datasource.isCommunityMember(community.id, userId);
         userRole = await _datasource.fetchUserRole(community.id, userId);
+        try {
+          isFollowing = await _datasource.isFollowingCommunity(
+            communityId: community.id,
+            userId: userId,
+          );
+        } catch (_) {
+          followAvailable = false;
+        }
       }
 
       // Newsletter stats are best-effort — if the table doesn't exist yet on
@@ -98,6 +111,8 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
         _articles = articles;
         _isMember = isMember;
         _userRole = userRole;
+        _isFollowing = isFollowing;
+        _followAvailable = followAvailable;
         _newsletterStats = newsletterStats;
         _isLoading = false;
       });
@@ -264,19 +279,22 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                 Text(
                   community.description!,
                   style: textStyle_14RegularGrey().copyWith(
-                    fontSize: 14.sp,
-                    height: 1.45,
-                    color: AppColors.subtitles,
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w500,
+                    height: 1.40,
+                    color: AppColors.greyText,
                   ),
                 ),
               ],
               if (stats != null) ...[
                 SizedBox(height: 10.h),
                 Text(
-                  '${stats.memberCount} ${stats.memberCount == 1 ? 'member' : 'members'} · ${stats.publishedCount} published',
+                  _formatCommunityStats(stats),
                   style: textStyle_12RegularGrey().copyWith(
                     fontSize: 13.sp,
-                    color: AppColors.subtitles,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.black,
+                    height: 1.5
                   ),
                 ),
               ],
@@ -285,6 +303,82 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
         ),
       ],
     );
+  }
+
+  String _formatCommunityStats(CommunityStats stats) {
+    final contributorLabel = stats.memberCount == 1
+        ? '1 Contributor'
+        : '${stats.memberCount} Contributors';
+    final followerLabel = stats.followerCount == 1
+        ? '1 Follower'
+        : '${stats.followerCount} Followers';
+    final publishedLabel = stats.publishedCount == 1
+        ? '1 Article'
+        : '${stats.publishedCount} Articles';
+
+    return '$contributorLabel · $followerLabel · $publishedLabel';
+  }
+
+  Future<void> _toggleFollow() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) {
+      context.push('/signin');
+      return;
+    }
+
+    if (_community == null || _followActionLoading) return;
+
+    final wasFollowing = _isFollowing;
+    setState(() {
+      _isFollowing = !wasFollowing;
+      _followActionLoading = true;
+      if (_stats != null) {
+        _stats = CommunityStats(
+          memberCount: _stats!.memberCount,
+          followerCount: wasFollowing
+              ? (_stats!.followerCount - 1).clamp(0, 1 << 30)
+              : _stats!.followerCount + 1,
+          publishedCount: _stats!.publishedCount,
+        );
+      }
+    });
+
+    try {
+      if (wasFollowing) {
+        await _datasource.unfollowCommunity(
+          communityId: _community!.id,
+          userId: user.id,
+        );
+      } else {
+        await _datasource.followCommunity(
+          communityId: _community!.id,
+          userId: user.id,
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isFollowing = wasFollowing;
+        if (_stats != null) {
+          _stats = CommunityStats(
+            memberCount: _stats!.memberCount,
+            followerCount: wasFollowing
+                ? _stats!.followerCount + 1
+                : (_stats!.followerCount - 1).clamp(0, 1 << 30),
+            publishedCount: _stats!.publishedCount,
+          );
+        }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e.toString().replaceFirst('Exception: ', ''),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _followActionLoading = false);
+    }
   }
 
   Widget _buildActions(BuildContext context) {
@@ -348,6 +442,50 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
             ),
           ),
         ),
+        if (_followAvailable) ...[
+          SizedBox(height: 12.h),
+          SizedBox(
+            width: double.infinity,
+            height: 48.h,
+            child: _isFollowing
+                ? OutlinedButton(
+                    onPressed: _followActionLoading ? null : _toggleFollow,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.black,
+                      side: const BorderSide(color: AppColors.black),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                    child: Text(
+                      _followActionLoading ? 'Updating…' : 'Following',
+                      style: textStyle_16BoldBlack().copyWith(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  )
+                : ElevatedButton(
+                    onPressed: _followActionLoading ? null : _toggleFollow,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.black,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                    child: Text(
+                      _followActionLoading ? 'Updating…' : 'Follow Community',
+                      style: textStyle_16BoldBlack().copyWith(
+                        fontSize: 14.sp,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+          ),
+        ],
       ],
     );
   }

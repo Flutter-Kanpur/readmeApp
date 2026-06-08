@@ -7,8 +7,11 @@ import 'package:intl/intl.dart';
 import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/app_image.dart';
 import 'package:Readme/core/utils/quill_content_parser.dart';
+import 'package:Readme/features/blog_detail/presentation/widgets/advertisement_banner.dart';
+import 'package:Readme/features/blog_detail/presentation/widgets/author_follow_card.dart';
 import 'package:Readme/features/blog_detail/presentation/widgets/blog_content_viewer.dart';
 import 'package:Readme/features/home_page/domain/entities/blog.dart';
+import 'package:Readme/features/profile_page/presentation/utils/open_author_profile.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class BlogDetailScreen extends StatelessWidget {
@@ -124,15 +127,18 @@ class BlogDetailScreen extends StatelessWidget {
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          CircleAvatar(
-                            radius: 20.r,
-                            backgroundColor: Colors.grey.shade200,
-                            backgroundImage: imageProviderFromSource(
-                              blog.author.avatarUrl,
+                          GestureDetector(
+                            onTap: () => openAuthorProfile(context, blog.author),
+                            child: CircleAvatar(
+                              radius: 20.r,
+                              backgroundColor: Colors.grey.shade200,
+                              backgroundImage: imageProviderFromSource(
+                                blog.author.avatarUrl,
+                              ),
+                              child: blog.author.avatarUrl == null
+                                  ? Icon(Icons.person, size: 20.r)
+                                  : null,
                             ),
-                            child: blog.author.avatarUrl == null
-                                ? Icon(Icons.person, size: 20.r)
-                                : null,
                           ),
                           SizedBox(width: 12.w),
                           Expanded(
@@ -175,6 +181,16 @@ class BlogDetailScreen extends StatelessWidget {
                         imageUrls: blog.imageUrls,
                         excludeImageUrl: coverImageUrl,
                       ),
+                      SizedBox(height: 32.h),
+                      ...blog.allAuthors
+                          .where((author) => author.id != null)
+                          .map(
+                            (author) => Padding(
+                              padding: EdgeInsets.only(bottom: 16.h),
+                              child: AuthorFollowCard(author: author),
+                            ),
+                          ),
+                      const AdvertisementBanner(),
                     ],
                   ),
                 ),
