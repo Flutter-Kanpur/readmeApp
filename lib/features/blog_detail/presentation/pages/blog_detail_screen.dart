@@ -190,7 +190,7 @@ class BlogDetailScreen extends StatelessWidget {
                               child: AuthorFollowCard(author: author),
                             ),
                           ),
-                      const AdvertisementBanner(),
+                      // const AdvertisementBanner(),
                     ],
                   ),
                 ),
