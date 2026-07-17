@@ -14,11 +14,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CommunityDetailScreen extends StatefulWidget {
-  const CommunityDetailScreen({
-    super.key,
-    required this.slug,
-    this.community,
-  });
+  const CommunityDetailScreen({super.key, required this.slug, this.community});
 
   final String slug;
   final Community? community;
@@ -133,81 +129,81 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
         child: _isLoading
             ? const CommunityDetailShimmer()
             : _error != null
-                ? _ErrorView(message: _error!, onBack: () => context.pop())
-                : RefreshIndicator(
-                    onRefresh: _loadDetail,
-                    child: CustomScrollView(
-                      physics: const AlwaysScrollableScrollPhysics(
-                        parent: BouncingScrollPhysics(),
+            ? _ErrorView(message: _error!, onBack: () => context.pop())
+            : RefreshIndicator(
+                onRefresh: _loadDetail,
+                child: CustomScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(
+                    parent: BouncingScrollPhysics(),
+                  ),
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.fromLTRB(20.w, 8.h, 20.w, 0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildBackLink(),
+                            SizedBox(height: 20.h),
+                            _buildHeader(),
+                            SizedBox(height: 24.h),
+                            _buildActions(context),
+                            SizedBox(height: 24.h),
+                            Divider(color: Colors.grey.shade200, height: 1),
+                            SizedBox(height: 24.h),
+                            if (_newsletterStats != null) ...[
+                              CommunityNewsletterSubscribeCard(
+                                community: _community!,
+                                stats: _newsletterStats!,
+                                datasource: _datasource,
+                                onSubscribed: _loadDetail,
+                              ),
+                              SizedBox(height: 24.h),
+                              Divider(color: Colors.grey.shade200, height: 1),
+                              SizedBox(height: 24.h),
+                            ],
+                            Text(
+                              'Published articles',
+                              style: textStyle_16BoldBlack().copyWith(
+                                fontSize: 20.sp,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            SizedBox(height: 16.h),
+                          ],
+                        ),
                       ),
-                      slivers: [
-                        SliverToBoxAdapter(
-                          child: Padding(
-                            padding: EdgeInsets.fromLTRB(20.w, 8.h, 20.w, 0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildBackLink(),
-                                SizedBox(height: 20.h),
-                                _buildHeader(),
-                                SizedBox(height: 24.h),
-                                _buildActions(context),
-                                SizedBox(height: 24.h),
-                                Divider(color: Colors.grey.shade200, height: 1),
-                                SizedBox(height: 24.h),
-                                if (_newsletterStats != null) ...[
-                                  CommunityNewsletterSubscribeCard(
-                                    community: _community!,
-                                    stats: _newsletterStats!,
-                                    datasource: _datasource,
-                                    onSubscribed: _loadDetail,
-                                  ),
-                                  SizedBox(height: 24.h),
-                                  Divider(color: Colors.grey.shade200, height: 1),
-                                  SizedBox(height: 24.h),
-                                ],
-                                Text(
-                                  'Published articles',
-                                  style: textStyle_16BoldBlack().copyWith(
-                                    fontSize: 20.sp,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                SizedBox(height: 16.h),
-                              ],
+                    ),
+                    if (_articles.isEmpty)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 20.w),
+                          child: Text(
+                            'No published articles yet.',
+                            style: textStyle_14RegularGrey().copyWith(
+                              fontSize: 14.sp,
+                              color: AppColors.subtitles,
                             ),
                           ),
                         ),
-                        if (_articles.isEmpty)
-                          SliverToBoxAdapter(
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 20.w),
-                              child: Text(
-                                'No published articles yet.',
-                                style: textStyle_14RegularGrey().copyWith(
-                                  fontSize: 14.sp,
-                                  color: AppColors.subtitles,
-                                ),
-                              ),
-                            ),
-                          )
-                        else
-                          SliverPadding(
-                            padding: EdgeInsets.fromLTRB(20.w, 0, 20.w, 32.h),
-                            sliver: SliverList.separated(
-                              itemCount: _articles.length,
-                              separatorBuilder: (_, __) => SizedBox(height: 12.h),
-                              itemBuilder: (context, index) {
-                                return CommunityBlogCard(
-                                  article: _articles[index],
-                                  community: _community!,
-                                );
-                              },
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
+                      )
+                    else
+                      SliverPadding(
+                        padding: EdgeInsets.fromLTRB(20.w, 0, 20.w, 32.h),
+                        sliver: SliverList.separated(
+                          itemCount: _articles.length,
+                          separatorBuilder: (_, __) => SizedBox(height: 12.h),
+                          itemBuilder: (context, index) {
+                            return CommunityBlogCard(
+                              article: _articles[index],
+                              community: _community!,
+                            );
+                          },
+                        ),
+                      ),
+                  ],
+                ),
+              ),
       ),
     );
   }
@@ -294,7 +290,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                     fontSize: 13.sp,
                     fontWeight: FontWeight.w500,
                     color: AppColors.black,
-                    height: 1.5
+                    height: 1.5,
                   ),
                 ),
               ],
@@ -370,11 +366,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
         }
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            e.toString().replaceFirst('Exception: ', ''),
-          ),
-        ),
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
       );
     } finally {
       if (mounted) setState(() => _followActionLoading = false);
@@ -492,10 +484,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
 }
 
 class _ErrorView extends StatelessWidget {
-  const _ErrorView({
-    required this.message,
-    required this.onBack,
-  });
+  const _ErrorView({required this.message, required this.onBack});
 
   final String message;
   final VoidCallback onBack;

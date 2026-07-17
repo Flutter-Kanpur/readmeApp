@@ -1,3 +1,5 @@
+import 'package:Readme/core/cache/blog_like_cache.dart';
+import 'package:Readme/features/blog_detail/data/datasource/blog_like_datasource.dart';
 import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/app_image.dart';
 import 'package:Readme/core/utils/text_style.dart';
@@ -63,13 +65,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     try {
-      final profileData = await _supabase
-          .from('profiles')
-          .select()
-          .eq('id', _user!.id)
-          .maybeSingle();
-      final publishedBlogs =
-          await _blogRepository.getBlogsByAuthor(_user!.id);
+      final profileData = await _profileDatasource.fetchProfileById(_user!.id);
+      final publishedBlogs = await _blogRepository.getBlogsByAuthor(_user!.id);
       final followStats = await _profileDatasource.fetchFollowStats(_user!.id);
 
       if (!mounted) return;
@@ -79,10 +76,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _followStats = followStats;
         _isLoading = false;
       });
+      await _preloadLikeState(publishedBlogs);
     } catch (e) {
       debugPrint('Error loading profile: $e');
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _preloadLikeState(List<Blog> blogs) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null || blogs.isEmpty || !mounted) return;
+
+    await BlogLikeCache.instance.preload(
+      userId: user.id,
+      blogIds: blogs.map((blog) => blog.id).toList(),
+      datasource: BlogLikeDatasource(_supabase),
+    );
+
+    if (mounted) setState(() {});
   }
 
   String get _userName =>

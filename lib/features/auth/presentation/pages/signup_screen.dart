@@ -6,7 +6,7 @@ import 'package:Readme/core/utils/text_style.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../shared/widgets/gradient_background.dart';
-import '../../../../shared/widgets/gradient_button.dart';
+import '../../../../shared/widgets/primary_button.dart';
 import '../../../../shared/widgets/textfield.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -310,13 +310,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   Widget _buildCreateAccountButton() {
-    return GradientButton(
+    return PrimaryButton(
       loading: loading,
-      text: "Create account",
-      fontSize: 16,
-      onTap: createAccount,
-      height: 55.h,
-      width: double.infinity,
+      text: 'Create account',
+      onPressed: createAccount,
     );
   }
 
@@ -332,10 +329,18 @@ class _SignUpScreenState extends State<SignUpScreen> {
               style: textStyle_16RegularBlack(),
             ),
             GestureDetector(
+              behavior: HitTestBehavior.opaque,
               onTap: () {
-                context.go('/signin');
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/signin');
+                }
               },
-              child: Text("Log in", style: textStyle_16RegularLinkBlue()),
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 8.h, horizontal: 4.w),
+                child: Text("Log in", style: textStyle_16RegularLinkBlue()),
+              ),
             ),
           ],
         ),

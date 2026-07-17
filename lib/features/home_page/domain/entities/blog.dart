@@ -12,6 +12,7 @@ class Blog {
   final String? communityId;
   final String? communityName;
   final String? communityLogoUrl;
+  final int likeCount;
 
   const Blog({
     required this.id,
@@ -27,7 +28,42 @@ class Blog {
     this.communityId,
     this.communityName,
     this.communityLogoUrl,
+    this.likeCount = 0,
   });
+
+  Blog copyWith({
+    String? id,
+    String? title,
+    String? content,
+    String? coverImage,
+    String? category,
+    DateTime? createdAt,
+    bool? isPublished,
+    Author? author,
+    List<Author>? coauthors,
+    List<String>? imageUrls,
+    String? communityId,
+    String? communityName,
+    String? communityLogoUrl,
+    int? likeCount,
+  }) {
+    return Blog(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      content: content ?? this.content,
+      coverImage: coverImage ?? this.coverImage,
+      category: category ?? this.category,
+      createdAt: createdAt ?? this.createdAt,
+      isPublished: isPublished ?? this.isPublished,
+      author: author ?? this.author,
+      coauthors: coauthors ?? this.coauthors,
+      imageUrls: imageUrls ?? this.imageUrls,
+      communityId: communityId ?? this.communityId,
+      communityName: communityName ?? this.communityName,
+      communityLogoUrl: communityLogoUrl ?? this.communityLogoUrl,
+      likeCount: likeCount ?? this.likeCount,
+    );
+  }
 
   /// Primary author followed by all unique co-authors. Useful for cards that
   /// render a stacked avatar group / combined name list.
@@ -47,9 +83,5 @@ class Author {
   final String name;
   final String? avatarUrl;
 
-  const Author({
-    this.id,
-    required this.name,
-    this.avatarUrl,
-  });
+  const Author({this.id, required this.name, this.avatarUrl});
 }

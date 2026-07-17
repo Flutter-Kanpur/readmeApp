@@ -1,5 +1,3 @@
-
-
 import 'package:Readme/features/home_page/domain/entities/blog_filter.dart';
 
 const List<BlogFilter> blogFilters = [

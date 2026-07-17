@@ -1,12 +1,10 @@
-import 'package:Readme/features/home_page/presentation/pages/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:Readme/core/utils/text_style.dart';
-import 'package:Readme/features/auth/presentation/pages/signup_screen.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../shared/widgets/gradient_background.dart';
-import '../../../../shared/widgets/gradient_button.dart';
+import '../../../../shared/widgets/primary_button.dart';
 import '../../../../shared/widgets/textfield.dart';
 
 class LoginWithEmail extends StatefulWidget {
@@ -28,26 +26,22 @@ class _LoginWithEmailState extends State<LoginWithEmail> {
   bool loading = false;
   final supabase = Supabase.instance.client;
 
-  void login() async {
-    setState(() {
-      loading = true;
-    });
+  Future<void> _login() async {
+    if (loading) return;
+
+    setState(() => loading = true);
     try {
-      final result = await supabase.auth.signInWithPassword(
-        email: _emailController.text,
+      await supabase.auth.signInWithPassword(
+        email: _emailController.text.trim(),
         password: _passwordController.text,
       );
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (context) => HomeScreen()),
-        (context) => false,
-      );
+
+      if (!mounted) return;
+      context.go('/home');
     } catch (e) {
-      print(e.toString());
+      debugPrint(e.toString());
     } finally {
-      setState(() {
-        loading = false;
-      });
+      if (mounted) setState(() => loading = false);
     }
   }
 
@@ -83,9 +77,7 @@ class _LoginWithEmailState extends State<LoginWithEmail> {
               _buildPasswordField(),
               SizedBox(height: 12.h),
               _buildForgotPasswordLink(),
-              loading
-                  ? Center(child: CircularProgressIndicator())
-                  : SizedBox(height: 20.h),
+              SizedBox(height: 20.h),
               _buildLoginButton(),
               SizedBox(height: 20.h),
               _buildCreateAccountLink(),
@@ -153,34 +145,30 @@ class _LoginWithEmailState extends State<LoginWithEmail> {
     return Align(
       alignment: Alignment.centerRight,
       child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: () {
-          // Handle forgot password
+          final email = _emailController.text.trim();
+          context.push(
+            '/forgot-password',
+            extra: email.isEmpty ? null : email,
+          );
         },
-        child: Text("Forgot Password?", style: textStyle_16RegularLinkBlue()),
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 8.h, horizontal: 4.w),
+          child: Text(
+            "Forgot Password?",
+            style: textStyle_16RegularLinkBlue(),
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildLoginButton() {
-    return GradientButton(
+    return PrimaryButton(
       loading: loading,
-      text: "Login",
-      fontSize: 16,
-      onTap: () async {
-        try {
-          await supabase.auth.signInWithPassword(
-            email: _emailController.text,
-            password: _passwordController.text,
-          );
-
-          if (!context.mounted) return;
-          context.go('/home');
-        } catch (e) {
-          debugPrint(e.toString());
-        }
-      },
-      height: 55.h,
-      width: double.infinity,
+      text: 'Login',
+      onPressed: _login,
     );
   }
 
@@ -191,13 +179,7 @@ class _LoginWithEmailState extends State<LoginWithEmail> {
       children: [
         Text("New here? ", style: textStyle_16RegularBlack()),
         GestureDetector(
-          onTap: () {
-            // Handle navigate to sign up
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => SignUpScreen()),
-            );
-          },
+          onTap: () => context.push('/signup'),
           child: Text(
             "Create an account",
             style: textStyle_16RegularLinkBlue(),

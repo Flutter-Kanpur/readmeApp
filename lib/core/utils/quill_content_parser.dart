@@ -5,6 +5,7 @@ import 'package:dart_quill_delta/dart_quill_delta.dart';
 import 'package:flutter_quill_delta_from_html/flutter_quill_delta_from_html.dart';
 import 'package:html_unescape/html_unescape.dart';
 import 'package:markdown/markdown.dart' as md;
+
 enum BlogContentFormat { quillDelta, html, markdown, plainText }
 
 final _htmlUnescape = HtmlUnescape();
@@ -241,7 +242,10 @@ String normalizePreBlocks(String html) {
     RegExp(r'<pre\b[^>]*>([\s\S]*?)</pre>', caseSensitive: false),
     (match) {
       var inner = match.group(1)!;
-      inner = inner.replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n');
+      inner = inner.replaceAll(
+        RegExp(r'<br\s*/?>', caseSensitive: false),
+        '\n',
+      );
       inner = inner.replaceAll(RegExp(r'<[^>]+>'), '');
       inner = _htmlUnescape.convert(inner);
       return '<pre>${inner.trim()}</pre>';
@@ -249,10 +253,7 @@ String normalizePreBlocks(String html) {
   );
 }
 
-String sanitizeHtmlForMobile(
-  String html, {
-  String? excludeImageUrl,
-}) {
+String sanitizeHtmlForMobile(String html, {String? excludeImageUrl}) {
   var result = html;
 
   result = result.replaceAll(
@@ -334,10 +335,7 @@ List<String> prepareHtmlContentBlocks(
       storagePathToUrl: storagePathToUrl,
     ),
   );
-  return flattenMediumHtml(
-    sanitized,
-    excludeImageUrl: excludeImageUrl,
-  );
+  return flattenMediumHtml(sanitized, excludeImageUrl: excludeImageUrl);
 }
 
 String? extractFirstImageUrl(
@@ -388,10 +386,7 @@ String? _figureToImgTag(String figureHtml) {
 
 /// Pulls readable block elements out of Medium's nested flex/680px wrappers so
 /// flutter_html lays out at full screen width instead of shrink-wrapping.
-List<String> flattenMediumHtml(
-  String html, {
-  String? excludeImageUrl,
-}) {
+List<String> flattenMediumHtml(String html, {String? excludeImageUrl}) {
   final pattern = RegExp(
     r'<(?:p|h[1-6]|figure|ul|ol|blockquote|pre)\b[^>]*>[\s\S]*?</(?:p|h[1-6]|figure|ul|ol|blockquote|pre)>',
     caseSensitive: false,
@@ -524,7 +519,9 @@ List<dynamic> prepareQuillOpsFromList(
       storagePathToUrl: storagePathToUrl,
     );
     if (resolved.isEmpty) return;
-    prepared.add({'insert': {'image': resolved}});
+    prepared.add({
+      'insert': {'image': resolved},
+    });
     prepared.add({'insert': '\n'});
   }
 
@@ -554,7 +551,9 @@ List<dynamic> prepareQuillOpsFromList(
     for (final match in placeholderRegex.allMatches(insert)) {
       matchedPlaceholder = true;
       if (match.start > cursor) {
-        prepared.add(_copyOpWithInsert(op, insert.substring(cursor, match.start)));
+        prepared.add(
+          _copyOpWithInsert(op, insert.substring(cursor, match.start)),
+        );
       }
 
       final index = int.tryParse(match.group(1)!);
@@ -588,10 +587,7 @@ List<dynamic> prepareQuillOpsForDisplay(
 }) {
   final ops = extractQuillOps(content);
   if (ops == null) return [];
-  return prepareQuillOpsFromList(
-    ops,
-    imageUrls: imageUrls,
-  );
+  return prepareQuillOpsFromList(ops, imageUrls: imageUrls);
 }
 
 Map<String, dynamic> _copyOpWithInsert(Map op, String insert) {

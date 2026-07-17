@@ -103,7 +103,10 @@ class _SearchBar extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 16.w,
+                    vertical: 8.h,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF3F3F3),
                     borderRadius: BorderRadius.circular(999),
@@ -152,9 +155,7 @@ class _FilterChip extends StatelessWidget {
           decoration: BoxDecoration(
             color: isSelected ? AppColors.black : Colors.white,
             borderRadius: BorderRadius.circular(999),
-            border: isSelected
-                ? null
-                : Border.all(color: Colors.grey.shade200),
+            border: isSelected ? null : Border.all(color: Colors.grey.shade200),
             boxShadow: isSelected
                 ? null
                 : [

@@ -6,11 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class CommunityCard extends StatelessWidget {
-  const CommunityCard({
-    super.key,
-    required this.community,
-    this.onTap,
-  });
+  const CommunityCard({super.key, required this.community, this.onTap});
 
   final Community community;
   final VoidCallback? onTap;

@@ -206,7 +206,8 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
       _drafts = drafts;
       _requests = requests;
       _members = members;
-      _newsletterStats = newsletterStats ??
+      _newsletterStats =
+          newsletterStats ??
           const CommunityNewsletterStats(
             subscriberCount: 0,
             isSubscribed: false,
@@ -294,14 +295,14 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
           updatedAt: DateTime.now(),
         );
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Community icon saved.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Community icon saved.')));
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save icon: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to save icon: $e')));
       }
     } finally {
       if (mounted) setState(() => _isSavingLogo = false);
@@ -314,9 +315,9 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
       await _refreshCurrentTab();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update role: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to update role: $e')));
       }
     }
   }
@@ -327,9 +328,9 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
       await _refreshCurrentTab();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to remove member: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to remove member: $e')));
       }
     }
   }
@@ -384,9 +385,9 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
       await _refreshCurrentTab();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to reject request: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to reject request: $e')));
       }
     }
   }
@@ -537,9 +538,9 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_friendlyJoinRequestError(e))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(_friendlyJoinRequestError(e))));
       }
     } finally {
       if (mounted) setState(() => _isSubmittingRequest = false);
@@ -574,14 +575,14 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
         _pendingRequest = null;
         _justSentRequest = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Join request cancelled.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Join request cancelled.')));
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not cancel request: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Could not cancel request: $e')));
       }
     } finally {
       if (mounted) setState(() => _isCancellingRequest = false);
@@ -596,10 +597,10 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
-                ? _ErrorView(message: _error!, onBack: () => context.pop())
-                : _userRole == 'admin'
-                    ? _buildAdminDashboard()
-                    : _buildJoinRequestView(),
+            ? _ErrorView(message: _error!, onBack: () => context.pop())
+            : _userRole == 'admin'
+            ? _buildAdminDashboard()
+            : _buildJoinRequestView(),
       ),
     );
   }
@@ -673,10 +674,7 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
           ),
           SizedBox(height: 20.h),
           if (isMember)
-            _MemberStatusCard(
-              communityName: community.name,
-              role: _userRole!,
-            )
+            _MemberStatusCard(communityName: community.name, role: _userRole!)
           else ...[
             if (hasPending && _justSentRequest) ...[
               _SentBanner(),
@@ -764,10 +762,15 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(999),
                     border: Border.all(
-                      color: isSelected ? AppColors.black : Colors.grey.shade200,
+                      color: isSelected
+                          ? AppColors.black
+                          : Colors.grey.shade200,
                     ),
                   ),
-                  padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 10.h),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 18.w,
+                    vertical: 10.h,
+                  ),
                   child: Text(
                     labelFor(tab),
                     style: textStyle_14RegularBlack().copyWith(
@@ -1024,7 +1027,9 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
                 controller: _inviteNameController,
                 decoration: InputDecoration(
                   hintText: 'Exact profile name to invite',
-                  hintStyle: textStyle_14RegularGrey().copyWith(fontSize: 13.sp),
+                  hintStyle: textStyle_14RegularGrey().copyWith(
+                    fontSize: 13.sp,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10.r),
                     borderSide: BorderSide(color: Colors.grey.shade200),
@@ -1097,13 +1102,12 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
   // Newsletter tab content
   // ============================================================
   Widget _buildNewsletterTab() {
-    final stats = _newsletterStats ??
-        const CommunityNewsletterStats(
-          subscriberCount: 0,
-          isSubscribed: false,
-        );
+    final stats =
+        _newsletterStats ??
+        const CommunityNewsletterStats(subscriberCount: 0, isSubscribed: false);
     final attachment = _pickedAttachment;
-    final canPublish = !_isPublishingIssue &&
+    final canPublish =
+        !_isPublishingIssue &&
         _issueTitleController.text.trim().isNotEmpty &&
         (_issueBodyController.text.trim().isNotEmpty || attachment != null);
 
@@ -1323,10 +1327,7 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
           fontSize: 13.sp,
           color: AppColors.subtitles,
         ),
-        contentPadding: EdgeInsets.symmetric(
-          horizontal: 14.w,
-          vertical: 12.h,
-        ),
+        contentPadding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10.r),
           borderSide: BorderSide(color: Colors.grey.shade300),
@@ -1345,10 +1346,7 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
 }
 
 class _DashboardCard extends StatelessWidget {
-  const _DashboardCard({
-    required this.title,
-    required this.child,
-  });
+  const _DashboardCard({required this.title, required this.child});
 
   final String title;
   final Widget child;
@@ -1405,12 +1403,7 @@ class _RoleDropdown extends StatelessWidget {
           value: value,
           isDense: true,
           items: roles
-              .map(
-                (role) => DropdownMenuItem(
-                  value: role,
-                  child: Text(role),
-                ),
-              )
+              .map((role) => DropdownMenuItem(value: role, child: Text(role)))
               .toList(),
           onChanged: onChanged,
         ),
@@ -1420,10 +1413,7 @@ class _RoleDropdown extends StatelessWidget {
 }
 
 class _ErrorView extends StatelessWidget {
-  const _ErrorView({
-    required this.message,
-    required this.onBack,
-  });
+  const _ErrorView({required this.message, required this.onBack});
 
   final String message;
   final VoidCallback onBack;
@@ -1445,10 +1435,7 @@ class _ErrorView extends StatelessWidget {
 }
 
 class _MemberStatusCard extends StatelessWidget {
-  const _MemberStatusCard({
-    required this.communityName,
-    required this.role,
-  });
+  const _MemberStatusCard({required this.communityName, required this.role});
 
   final String communityName;
   final String role;
@@ -1562,10 +1549,8 @@ class _PendingRequestCard extends StatelessWidget {
   String _formatTimestamp(DateTime when) {
     final local = when.toLocal();
     String pad(int v) => v.toString().padLeft(2, '0');
-    final date =
-        '${pad(local.day)}/${pad(local.month)}/${local.year}';
-    final time =
-        '${pad(local.hour)}:${pad(local.minute)}:${pad(local.second)}';
+    final date = '${pad(local.day)}/${pad(local.month)}/${local.year}';
+    final time = '${pad(local.hour)}:${pad(local.minute)}:${pad(local.second)}';
     return '$date, $time';
   }
 
@@ -1629,10 +1614,7 @@ class _PendingRequestCard extends StatelessWidget {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(999),
               ),
-              padding: EdgeInsets.symmetric(
-                horizontal: 20.w,
-                vertical: 12.h,
-              ),
+              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
             ),
             child: isCancelling
                 ? SizedBox(
@@ -1786,11 +1768,7 @@ class _AttachmentChip extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.attach_file_rounded,
-            size: 16.sp,
-            color: AppColors.black,
-          ),
+          Icon(Icons.attach_file_rounded, size: 16.sp, color: AppColors.black),
           SizedBox(width: 8.w),
           Expanded(
             child: Column(

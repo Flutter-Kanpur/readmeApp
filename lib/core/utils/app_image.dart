@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -14,6 +15,44 @@ bool isNetworkImageUrl(String source) {
 
   final uri = Uri.tryParse(trimmed);
   return uri != null && (uri.scheme == 'http' || uri.scheme == 'https');
+}
+
+/// Optionally rewrites Supabase Storage public URLs to the image transform
+/// endpoint. Disabled by default because transforms often fail on free plans
+/// and for SVG/community logos, which made images appear broken.
+String optimizeStorageImageUrl(
+  String url, {
+  int? width,
+  int? height,
+  int quality = 80,
+  bool enableTransform = false,
+}) {
+  if (!enableTransform || !isNetworkImageUrl(url)) return url;
+
+  final uri = Uri.parse(url);
+  const objectPrefix = '/storage/v1/object/public/';
+  if (!uri.path.contains(objectPrefix)) return url;
+
+  final lowerPath = uri.path.toLowerCase();
+  final isRaster = lowerPath.endsWith('.jpg') ||
+      lowerPath.endsWith('.jpeg') ||
+      lowerPath.endsWith('.png') ||
+      lowerPath.endsWith('.webp') ||
+      lowerPath.endsWith('.gif');
+  if (!isRaster) return url;
+
+  final renderPath = uri.path.replaceFirst(
+    objectPrefix,
+    '/storage/v1/render/image/public/',
+  );
+  final params = <String, String>{
+    ...uri.queryParameters,
+    'quality': '$quality',
+  };
+  if (width != null) params['width'] = '$width';
+  if (height != null) params['height'] = '$height';
+
+  return uri.replace(path: renderPath, queryParameters: params).toString();
 }
 
 /// Normalizes image sources from Supabase storage paths, protocol-relative URLs, etc.
@@ -75,9 +114,11 @@ Uint8List? decodeDataUriImage(String dataUri) {
   }
 }
 
-/// Resolves avatars, cover images, and other sources that may be http(s),
-/// data URIs, or local file paths.
-ImageProvider? imageProviderFromSource(String? source) {
+ImageProvider? imageProviderFromSource(
+  String? source, {
+  int? width,
+  int? height,
+}) {
   if (source == null || source.isEmpty) return null;
 
   if (isDataUriImage(source)) {
@@ -87,7 +128,11 @@ ImageProvider? imageProviderFromSource(String? source) {
   }
 
   if (isNetworkImageUrl(source)) {
-    return NetworkImage(source);
+    return CachedNetworkImageProvider(
+      source.trim(),
+      maxWidth: width,
+      maxHeight: height,
+    );
   }
 
   if (!kIsWeb) {
@@ -119,9 +164,65 @@ class AppImage extends StatelessWidget {
   final double? height;
   final Widget? placeholder;
 
+  int? get _renderWidth {
+    final value = width;
+    if (value == null || !value.isFinite || value <= 0) return null;
+    return (value * 2).round();
+  }
+
+  int? get _renderHeight {
+    final value = height;
+    if (value == null || !value.isFinite || value <= 0) return null;
+    return (value * 2).round();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final provider = imageProviderFromSource(source);
+    final rawSource = source;
+    if (rawSource == null || rawSource.isEmpty) {
+      return placeholder ?? const SizedBox.shrink();
+    }
+
+    if (isDataUriImage(rawSource)) {
+      final provider = imageProviderFromSource(rawSource);
+      if (provider == null) {
+        return placeholder ?? const SizedBox.shrink();
+      }
+      return Image(
+        image: provider,
+        fit: fit,
+        width: width,
+        height: height,
+        errorBuilder: (_, __, ___) =>
+            placeholder ?? const Icon(Icons.broken_image),
+      );
+    }
+
+    if (isNetworkImageUrl(rawSource)) {
+      // Use the original public URL. Disk cache still cuts repeat egress;
+      // render transforms were breaking community logos / many storage files.
+      return CachedNetworkImage(
+        imageUrl: rawSource.trim(),
+        fit: fit,
+        width: width,
+        height: height,
+        memCacheWidth: _renderWidth,
+        memCacheHeight: _renderHeight,
+        placeholder: (_, __) =>
+            placeholder ??
+            SizedBox(
+              width: width,
+              height: height,
+              child: const Center(
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+        errorWidget: (_, __, ___) =>
+            placeholder ?? const Icon(Icons.broken_image),
+      );
+    }
+
+    final provider = imageProviderFromSource(rawSource);
     if (provider == null) {
       return placeholder ?? const SizedBox.shrink();
     }

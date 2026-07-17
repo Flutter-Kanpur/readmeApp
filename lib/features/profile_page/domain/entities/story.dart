@@ -8,5 +8,12 @@ class Story {
   final String date;
   final Color tagColor;
 
-  Story({required this.category, required this.source, required this.title, required this.readTime, required this.date, required this.tagColor});
+  Story({
+    required this.category,
+    required this.source,
+    required this.title,
+    required this.readTime,
+    required this.date,
+    required this.tagColor,
+  });
 }

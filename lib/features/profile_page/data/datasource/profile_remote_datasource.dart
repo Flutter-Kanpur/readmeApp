@@ -1,10 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class UserFollowStats {
-  const UserFollowStats({
-    required this.followers,
-    required this.following,
-  });
+  const UserFollowStats({required this.followers, required this.following});
 
   final int followers;
   final int following;
@@ -18,7 +15,7 @@ class ProfileRemoteDatasource {
   Future<Map<String, dynamic>?> fetchProfileById(String userId) async {
     final response = await client
         .from('profiles')
-        .select()
+        .select('id, name, username, headline, bio, avatar_url')
         .eq('id', userId)
         .maybeSingle();
 
@@ -29,18 +26,15 @@ class ProfileRemoteDatasource {
     try {
       final followers = await client
           .from('follows')
-          .select('id')
+          .count(CountOption.exact)
           .eq('following_id', userId);
 
       final following = await client
           .from('follows')
-          .select('id')
+          .count(CountOption.exact)
           .eq('follower_id', userId);
 
-      return UserFollowStats(
-        followers: (followers as List).length,
-        following: (following as List).length,
-      );
+      return UserFollowStats(followers: followers, following: following);
     } catch (_) {
       return const UserFollowStats(followers: 0, following: 0);
     }

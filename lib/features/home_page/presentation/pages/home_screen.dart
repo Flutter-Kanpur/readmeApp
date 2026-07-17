@@ -1,4 +1,7 @@
+import 'package:Readme/core/cache/blog_feed_cache.dart';
+import 'package:Readme/core/cache/blog_like_cache.dart';
 import 'package:Readme/core/utils/text_style.dart';
+import 'package:Readme/features/blog_detail/data/datasource/blog_like_datasource.dart';
 import 'package:Readme/features/home_page/domain/entities/blog.dart';
 import 'package:Readme/features/home_page/presentation/state/article_category_filters.dart';
 import 'package:flutter/material.dart';
@@ -65,18 +68,46 @@ class _HomeScreenState extends State<HomeScreen> {
   double get _statusBarBlend =>
       (_scrollOffset / _statusBarFadeDistance).clamp(0.0, 1.0);
 
-  Future<void> _loadBlogs() async {
+  Future<void> _loadBlogs({bool forceRefresh = false}) async {
     if (!mounted) return;
+
+    if (!forceRefresh && BlogFeedCache.instance.isFresh) {
+      setState(() {
+        allBlogs = BlogFeedCache.instance.blogs!;
+        _selectedFilter = ArticleCategoryFilter.forYou;
+        _isLoadingBlogs = false;
+      });
+      await _preloadLikeState(allBlogs);
+      return;
+    }
+
     setState(() => _isLoadingBlogs = true);
 
-    final blogs = await blogRepository.getBlogs();
+    try {
+      final blogs = await BlogFeedCache.instance.load(blogRepository.getBlogs);
+      if (!mounted) return;
+      setState(() {
+        allBlogs = blogs;
+        _selectedFilter = ArticleCategoryFilter.forYou;
+        _isLoadingBlogs = false;
+      });
+      await _preloadLikeState(blogs);
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingBlogs = false);
+    }
+  }
 
-    if (!mounted) return;
-    setState(() {
-      allBlogs = blogs;
-      _selectedFilter = ArticleCategoryFilter.forYou;
-      _isLoadingBlogs = false;
-    });
+  Future<void> _preloadLikeState(List<Blog> blogs) async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null || blogs.isEmpty || !mounted) return;
+
+    await BlogLikeCache.instance.preload(
+      userId: user.id,
+      blogIds: blogs.map((blog) => blog.id).toList(),
+      datasource: BlogLikeDatasource(Supabase.instance.client),
+    );
+
+    if (mounted) setState(() {});
   }
 
   List<Blog> get filteredBlogs {
@@ -114,112 +145,112 @@ class _HomeScreenState extends State<HomeScreen> {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: statusBarStyle,
       child: GradientBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        // appBar: AppBar(
-        //   forceMaterialTransparency: true,
-        //   automaticallyImplyLeading: false,
-        //   backgroundColor: Colors.transparent,
-        //   title: Padding(
-        //     padding: const EdgeInsets.symmetric(horizontal: 8.0),
-        //     child: Row(
-        //       children: [
-        //         ClipRRect(
-        //             borderRadius: BorderRadius.circular(5),
-        //             child: Container(
-        //                 color: Colors.black,
-        //                 height: 30.h,
-        //                 width: 30.w,
-        //                 child: Padding(
-        //                   padding: const EdgeInsets.all(4.0),
-        //                   child: SvgPicture.asset("assets/icons/logo.svg"),
-        //                 ))),
-        //         10.horizontalSpace,
-        //         Text("Readme", style: textStyle_24BoldBlack().copyWith(
-        //           fontSize: 20.sp,
-        //           fontWeight: FontWeight.w700,
-        //         )),
-        //       ],
-        //     ),
-        //   ),
-        // ),
-        extendBody: true,
-        extendBodyBehindAppBar: true,
-        body: Stack(
-          children: [
-            SafeArea(
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20.0, vertical: 0),
-                child: CustomScrollView(
-                  controller: _scrollController,
-                  slivers: [
-                SliverToBoxAdapter(
-                  child: SizedBox(height: 40.h),
-                ),
-                SliverToBoxAdapter(
-                  child: HomeHeroSection(
-                    onStartWriting: () => context.push('/create'),
-                    onExploreTopics: () => context.go('/search'),
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          // appBar: AppBar(
+          //   forceMaterialTransparency: true,
+          //   automaticallyImplyLeading: false,
+          //   backgroundColor: Colors.transparent,
+          //   title: Padding(
+          //     padding: const EdgeInsets.symmetric(horizontal: 8.0),
+          //     child: Row(
+          //       children: [
+          //         ClipRRect(
+          //             borderRadius: BorderRadius.circular(5),
+          //             child: Container(
+          //                 color: Colors.black,
+          //                 height: 30.h,
+          //                 width: 30.w,
+          //                 child: Padding(
+          //                   padding: const EdgeInsets.all(4.0),
+          //                   child: SvgPicture.asset("assets/icons/logo.svg"),
+          //                 ))),
+          //         10.horizontalSpace,
+          //         Text("Readme", style: textStyle_24BoldBlack().copyWith(
+          //           fontSize: 20.sp,
+          //           fontWeight: FontWeight.w700,
+          //         )),
+          //       ],
+          //     ),
+          //   ),
+          // ),
+          extendBody: true,
+          extendBodyBehindAppBar: true,
+          body: Stack(
+            children: [
+              SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20.0,
+                    vertical: 0,
                   ),
-                ),
-                SliverToBoxAdapter(
-                  child: HomeArticlesSection(
-                    onSearchTap: () => context.go('/search'),
-                    onForYouTap: () {
-                      setState(() {
-                        _selectedFilter = ArticleCategoryFilter.forYou;
-                      });
-                    },
-                    onFiltersTap: _showCategoryFilters,
-                    isForYouSelected: _selectedFilter.isForYou,
-                    hasActiveFilter: !_selectedFilter.isForYou,
-                  ),
-                ),
-                if (_isLoadingBlogs)
-                  SliverList.separated(
-                    itemCount: 5,
-                    separatorBuilder: (_, __) => SizedBox(height: 16.h),
-                    itemBuilder: (_, __) => const BlogCardShimmer(),
-                  )
-                else if (filteredBlogs.isEmpty)
-                  const SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: Center(
-                      child: Text(
-                        'No blogs found',
-                        style: TextStyle(fontSize: 16),
+                  child: CustomScrollView(
+                    controller: _scrollController,
+                    slivers: [
+                      SliverToBoxAdapter(child: SizedBox(height: 40.h)),
+                      SliverToBoxAdapter(
+                        child: HomeHeroSection(
+                          onStartWriting: () => context.push('/create'),
+                          onExploreTopics: () => context.go('/search'),
+                        ),
                       ),
-                    ),
-                  )
-                else
-                  SliverList.separated(
-                    itemCount: filteredBlogs.length,
-                    separatorBuilder: (_, __) => SizedBox(height: 16.h),
-                    itemBuilder: (context, index) {
-                      return BlogCard(blog: filteredBlogs[index]);
-                    },
+                      SliverToBoxAdapter(
+                        child: HomeArticlesSection(
+                          onSearchTap: () => context.go('/search'),
+                          onForYouTap: () {
+                            setState(() {
+                              _selectedFilter = ArticleCategoryFilter.forYou;
+                            });
+                          },
+                          onFiltersTap: _showCategoryFilters,
+                          isForYouSelected: _selectedFilter.isForYou,
+                          hasActiveFilter: !_selectedFilter.isForYou,
+                        ),
+                      ),
+                      if (_isLoadingBlogs)
+                        SliverList.separated(
+                          itemCount: 5,
+                          separatorBuilder: (_, __) => SizedBox(height: 16.h),
+                          itemBuilder: (_, __) => const BlogCardShimmer(),
+                        )
+                      else if (filteredBlogs.isEmpty)
+                        const SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: Center(
+                            child: Text(
+                              'No blogs found',
+                              style: TextStyle(fontSize: 16),
+                            ),
+                          ),
+                        )
+                      else
+                        SliverList.separated(
+                          itemCount: filteredBlogs.length,
+                          separatorBuilder: (_, __) => SizedBox(height: 16.h),
+                          itemBuilder: (context, index) {
+                            return BlogCard(blog: filteredBlogs[index]);
+                          },
+                        ),
+                      SliverToBoxAdapter(child: SizedBox(height: 80.h)),
+                    ],
                   ),
-                SliverToBoxAdapter(child: SizedBox(height: 80.h)),
-                  ],
                 ),
               ),
-            ),
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              height: topInset,
-              child: IgnorePointer(
-                // child: ColoredBox(
-                //   color: Colors.white.withValues(alpha: blend),
-                // ),
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: topInset,
+                child: IgnorePointer(
+                  // child: ColoredBox(
+                  //   color: Colors.white.withValues(alpha: blend),
+                  // ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
-    ),
     );
   }
 }

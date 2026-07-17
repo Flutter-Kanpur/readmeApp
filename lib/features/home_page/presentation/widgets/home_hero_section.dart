@@ -4,11 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class HomeHeroSection extends StatelessWidget {
-  const HomeHeroSection({
-    super.key,
-    this.onStartWriting,
-    this.onExploreTopics,
-  });
+  const HomeHeroSection({super.key, this.onStartWriting, this.onExploreTopics});
 
   final VoidCallback? onStartWriting;
   final VoidCallback? onExploreTopics;

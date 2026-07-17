@@ -1,7 +1,9 @@
+import 'package:Readme/core/cache/blog_like_cache.dart';
 import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/app_image.dart';
 import 'package:Readme/core/utils/quill_content_parser.dart';
 import 'package:Readme/core/utils/text_style.dart';
+import 'package:Readme/features/blog_detail/presentation/widgets/blog_support_button.dart';
 import 'package:Readme/features/home_page/domain/entities/blog.dart';
 import 'package:Readme/features/search/data/models/explore_article_model.dart';
 import 'package:flutter/material.dart';
@@ -9,10 +11,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
 class ExploreArticleCard extends StatelessWidget {
-  const ExploreArticleCard({
-    super.key,
-    required this.article,
-  });
+  const ExploreArticleCard({super.key, required this.article});
 
   final ExploreArticle article;
 
@@ -20,11 +19,15 @@ class ExploreArticleCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final authorNames = article.authors.map((a) => a.name).join(', ');
     final authorCount = article.authors.length;
-    final hasCommunity = article.communityName != null &&
+    final hasCommunity =
+        article.communityName != null &&
         article.communityName!.trim().isNotEmpty;
 
+    final preview = parseQuillContent(article.blog.content).trim();
+
     return GestureDetector(
-      onTap: () => context.push('/blog/${article.blog.id}', extra: article.blog),
+      onTap: () =>
+          context.push('/blog/${article.blog.id}', extra: article.blog),
       child: Container(
         padding: EdgeInsets.all(20.w),
         decoration: BoxDecoration(
@@ -108,16 +111,25 @@ class ExploreArticleCard extends StatelessWidget {
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
             ),
-            SizedBox(height: 10.h),
-            Text(
-              parseQuillContent(article.blog.content),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: textStyle_14RegularGrey().copyWith(
-                fontSize: 14.sp,
-                color: AppColors.subtitles,
-                height: 1.45,
+            if (preview.isNotEmpty) ...[
+              SizedBox(height: 10.h),
+              Text(
+                preview,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: textStyle_14RegularGrey().copyWith(
+                  fontSize: 14.sp,
+                  color: AppColors.subtitles,
+                  height: 1.45,
+                ),
               ),
+            ],
+            SizedBox(height: 14.h),
+            BlogSupportButton(
+              blogId: article.blog.id,
+              initialLikeCount: article.blog.likeCount,
+              initialIsLiked: BlogLikeCache.instance.isLiked(article.blog.id),
+              compact: true,
             ),
           ],
         ),
@@ -127,10 +139,7 @@ class ExploreArticleCard extends StatelessWidget {
 }
 
 class _CommunityTag extends StatelessWidget {
-  const _CommunityTag({
-    required this.name,
-    this.logoUrl,
-  });
+  const _CommunityTag({required this.name, this.logoUrl});
 
   final String name;
   final String? logoUrl;
@@ -225,11 +234,11 @@ class _AuthorAvatarStack extends StatelessWidget {
                 child: CircleAvatar(
                   radius: radius - 1.5,
                   backgroundColor: Colors.grey.shade200,
-                  backgroundImage:
-                      imageProviderFromSource(visible[i].avatarUrl),
+                  backgroundImage: imageProviderFromSource(
+                    visible[i].avatarUrl,
+                  ),
                   child: visible[i].avatarUrl == null
-                      ? Icon(Icons.person,
-                          size: radius, color: Colors.grey)
+                      ? Icon(Icons.person, size: radius, color: Colors.grey)
                       : null,
                 ),
               ),

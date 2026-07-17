@@ -10,6 +10,7 @@ import 'package:Readme/core/utils/quill_content_parser.dart';
 import 'package:Readme/features/blog_detail/presentation/widgets/advertisement_banner.dart';
 import 'package:Readme/features/blog_detail/presentation/widgets/author_follow_card.dart';
 import 'package:Readme/features/blog_detail/presentation/widgets/blog_content_viewer.dart';
+import 'package:Readme/features/blog_detail/presentation/widgets/blog_support_button.dart';
 import 'package:Readme/features/home_page/domain/entities/blog.dart';
 import 'package:Readme/features/profile_page/presentation/utils/open_author_profile.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -27,13 +28,10 @@ class BlogDetailScreen extends StatelessWidget {
 
   String? _resolveCoverImageUrl() {
     return resolveBlogImageUrl(
-      blog.coverImage,
-      storagePathToUrl: _storagePublicUrl,
-    ) ??
-        extractFirstImageUrl(
-          blog.content,
+          blog.coverImage,
           storagePathToUrl: _storagePublicUrl,
-        );
+        ) ??
+        extractFirstImageUrl(blog.content, storagePathToUrl: _storagePublicUrl);
   }
 
   @override
@@ -118,7 +116,9 @@ class BlogDetailScreen extends StatelessWidget {
                               height: 240.h,
                               color: Colors.grey.shade100,
                               alignment: Alignment.center,
-                              child: const CircularProgressIndicator(strokeWidth: 2),
+                              child: const CircularProgressIndicator(
+                                strokeWidth: 2,
+                              ),
                             ),
                           ),
                         ),
@@ -128,7 +128,8 @@ class BlogDetailScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           GestureDetector(
-                            onTap: () => openAuthorProfile(context, blog.author),
+                            onTap: () =>
+                                openAuthorProfile(context, blog.author),
                             child: CircleAvatar(
                               radius: 20.r,
                               backgroundColor: Colors.grey.shade200,
@@ -156,8 +157,9 @@ class BlogDetailScreen extends StatelessWidget {
                                 ),
                                 SizedBox(height: 2.h),
                                 Text(
-                                  DateFormat('EEE MMM d yyyy')
-                                      .format(blog.createdAt),
+                                  DateFormat(
+                                    'EEE MMM d yyyy',
+                                  ).format(blog.createdAt),
                                   style: GoogleFonts.poppins(
                                     fontSize: 13.sp,
                                     color: AppColors.subtitles,
@@ -168,6 +170,14 @@ class BlogDetailScreen extends StatelessWidget {
                             ),
                           ),
                         ],
+                      ),
+                      SizedBox(height: 20.h),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: BlogSupportButton(
+                          blogId: blog.id,
+                          initialLikeCount: blog.likeCount,
+                        ),
                       ),
                       SizedBox(height: 24.h),
                       Divider(

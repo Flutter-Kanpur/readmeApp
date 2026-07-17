@@ -70,11 +70,7 @@ class _CommunityNewsletterSubscribeCardState
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              e.toString().replaceFirst('Exception: ', ''),
-            ),
-          ),
+          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
         );
       }
     } finally {
@@ -256,7 +252,11 @@ class _SubscribedBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.check_rounded, size: 16.sp, color: const Color(0xFF1B7D33)),
+          Icon(
+            Icons.check_rounded,
+            size: 16.sp,
+            color: const Color(0xFF1B7D33),
+          ),
           SizedBox(width: 8.w),
           Text(
             'You\'re subscribed',

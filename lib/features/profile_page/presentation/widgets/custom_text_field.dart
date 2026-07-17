@@ -11,7 +11,17 @@ class CustomTextField extends StatelessWidget {
   final String? Function(String?)? validator;
   final void Function(String)? onChanged;
 
-  const CustomTextField({super.key, required this.label, this.hintText, this.initialValue, this.controller, this.maxLines = 1, this.keyboardType, this.validator, this.onChanged});
+  const CustomTextField({
+    super.key,
+    required this.label,
+    this.hintText,
+    this.initialValue,
+    this.controller,
+    this.maxLines = 1,
+    this.keyboardType,
+    this.validator,
+    this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +30,11 @@ class CustomTextField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w500, color: Colors.black),
+          style: TextStyle(
+            fontSize: 14.sp,
+            fontWeight: FontWeight.w500,
+            color: Colors.black,
+          ),
         ),
         SizedBox(height: 8.h),
         TextFormField(
@@ -35,10 +49,22 @@ class CustomTextField extends StatelessWidget {
             hintStyle: TextStyle(color: Colors.grey[500], fontSize: 16.sp),
             filled: true,
             fillColor: Colors.grey[200],
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.r), borderSide: BorderSide.none),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12.r), borderSide: BorderSide.none),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12.r), borderSide: BorderSide.none),
-            contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: BorderSide.none,
+            ),
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: 16.w,
+              vertical: 12.h,
+            ),
           ),
           style: TextStyle(fontSize: 16.sp),
         ),

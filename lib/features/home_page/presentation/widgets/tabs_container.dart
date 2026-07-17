@@ -20,14 +20,14 @@ class TabsContainer extends StatelessWidget {
         height: 35.h,
         padding: EdgeInsets.symmetric(horizontal: 16.sp),
         decoration: BoxDecoration(
-          color: isSelected?Colors.black:Colors.white,
+          color: isSelected ? Colors.black : Colors.white,
           borderRadius: BorderRadius.circular(30.r),
         ),
         alignment: Alignment.center,
         child: Text(
           text,
           style: TextStyle(
-            color: isSelected?Colors.white:Colors.grey.shade700,
+            color: isSelected ? Colors.white : Colors.grey.shade700,
             fontWeight: FontWeight.w800,
           ),
         ),

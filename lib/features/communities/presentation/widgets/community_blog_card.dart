@@ -1,7 +1,9 @@
+import 'package:Readme/core/cache/blog_like_cache.dart';
 import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/app_image.dart';
 import 'package:Readme/core/utils/quill_content_parser.dart';
 import 'package:Readme/core/utils/text_style.dart';
+import 'package:Readme/features/blog_detail/presentation/widgets/blog_support_button.dart';
 import 'package:Readme/features/communities/data/models/community_article_model.dart';
 import 'package:Readme/features/communities/domain/entities/community.dart';
 import 'package:Readme/features/home_page/domain/entities/blog.dart';
@@ -24,8 +26,11 @@ class CommunityBlogCard extends StatelessWidget {
     final authorNames = article.authors.map((a) => a.name).join(', ');
     final authorCount = article.authors.length;
 
+    final preview = parseQuillContent(article.blog.content).trim();
+
     return GestureDetector(
-      onTap: () => context.push('/blog/${article.blog.id}', extra: article.blog),
+      onTap: () =>
+          context.push('/blog/${article.blog.id}', extra: article.blog),
       child: Container(
         padding: EdgeInsets.all(20.w),
         decoration: BoxDecoration(
@@ -41,10 +46,7 @@ class CommunityBlogCard extends StatelessWidget {
               runSpacing: 8.h,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                _CommunityTag(
-                  name: community.name,
-                  logoUrl: community.logoUrl,
-                ),
+                _CommunityTag(name: community.name, logoUrl: community.logoUrl),
                 Text(
                   article.blog.category.toUpperCase(),
                   style: textStyle_14BoldLinkBlue().copyWith(
@@ -98,16 +100,25 @@ class CommunityBlogCard extends StatelessWidget {
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
             ),
-            SizedBox(height: 10.h),
-            Text(
-              parseQuillContent(article.blog.content),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: textStyle_14RegularGrey().copyWith(
-                fontSize: 14.sp,
-                color: AppColors.subtitles,
-                height: 1.45,
+            if (preview.isNotEmpty) ...[
+              SizedBox(height: 10.h),
+              Text(
+                preview,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: textStyle_14RegularGrey().copyWith(
+                  fontSize: 14.sp,
+                  color: AppColors.subtitles,
+                  height: 1.45,
+                ),
               ),
+            ],
+            SizedBox(height: 14.h),
+            BlogSupportButton(
+              blogId: article.blog.id,
+              initialLikeCount: article.blog.likeCount,
+              initialIsLiked: BlogLikeCache.instance.isLiked(article.blog.id),
+              compact: true,
             ),
           ],
         ),
@@ -117,10 +128,7 @@ class CommunityBlogCard extends StatelessWidget {
 }
 
 class _CommunityTag extends StatelessWidget {
-  const _CommunityTag({
-    required this.name,
-    this.logoUrl,
-  });
+  const _CommunityTag({required this.name, this.logoUrl});
 
   final String name;
   final String? logoUrl;
@@ -215,11 +223,11 @@ class _AuthorAvatarStack extends StatelessWidget {
                 child: CircleAvatar(
                   radius: radius - 1.5,
                   backgroundColor: Colors.grey.shade200,
-                  backgroundImage:
-                      imageProviderFromSource(visible[i].avatarUrl),
+                  backgroundImage: imageProviderFromSource(
+                    visible[i].avatarUrl,
+                  ),
                   child: visible[i].avatarUrl == null
-                      ? Icon(Icons.person,
-                          size: radius, color: Colors.grey)
+                      ? Icon(Icons.person, size: radius, color: Colors.grey)
                       : null,
                 ),
               ),

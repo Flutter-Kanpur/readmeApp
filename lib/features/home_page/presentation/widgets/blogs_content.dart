@@ -5,19 +5,13 @@ import 'package:Readme/features/home_page/presentation/widgets/blog_card.dart';
 class BlogsContent extends StatelessWidget {
   final List<Blog> blogs;
 
-  const BlogsContent({
-    super.key,
-    required this.blogs,
-  });
+  const BlogsContent({super.key, required this.blogs});
 
   @override
   Widget build(BuildContext context) {
     if (blogs.isEmpty) {
       return const Center(
-        child: Text(
-          'No blogs found',
-          style: TextStyle(fontSize: 16),
-        ),
+        child: Text('No blogs found', style: TextStyle(fontSize: 16)),
       );
     }
 
@@ -27,9 +21,7 @@ class BlogsContent extends StatelessWidget {
       separatorBuilder: (_, __) => const SizedBox(height: 16),
       itemBuilder: (context, index) {
         final blog = blogs[index];
-        return BlogCard(
-          blog: blog,
-        );
+        return BlogCard(blog: blog);
       },
     );
   }

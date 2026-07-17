@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/app_image.dart';
+import 'package:Readme/core/utils/draft_storage.dart';
 import 'package:Readme/core/utils/text_style.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -25,6 +26,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final ImagePicker _picker = ImagePicker();
   bool _isLoading = false;
   bool _isLoadingProfile = true;
+  bool _isDeleting = false;
 
   final supabase = Supabase.instance.client;
   User? _user;
@@ -92,6 +94,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (selected == null || !mounted) return;
 
     final bytes = await selected.readAsBytes();
+    if (!mounted) return;
     if (bytes.length > _maxImageBytes) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -202,6 +205,78 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
+  Future<void> _confirmDeleteAccount() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: !_isDeleting,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete account?'),
+        content: const Text(
+          'Your profile and account will be permanently deleted. This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.warning),
+            child: const Text('Delete permanently'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _deleteAccount();
+    }
+  }
+
+  Future<void> _deleteAccount() async {
+    final user = supabase.auth.currentUser;
+    if (user == null) {
+      if (mounted) context.go('/welcome');
+      return;
+    }
+
+    setState(() => _isDeleting = true);
+
+    try {
+      final response = await supabase.functions.invoke('delete-account');
+      if (response.status < 200 || response.status >= 300) {
+        final data = response.data;
+        final message = data is Map<String, dynamic>
+            ? data['error'] as String?
+            : null;
+        throw Exception(message ?? 'The server could not delete your account.');
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_socialPrefsKey(user.id));
+      await DraftStorage.clearDraft();
+
+      try {
+        await supabase.auth.signOut(scope: SignOutScope.local);
+      } catch (error) {
+        debugPrint('Local sign out after account deletion failed: $error');
+      }
+
+      if (!mounted) return;
+      context.go('/welcome');
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Unable to delete account. Please try again.\n$error'),
+          backgroundColor: AppColors.warning,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isDeleting = false);
+    }
+  }
+
   @override
   void dispose() {
     _fullNameController.dispose();
@@ -250,7 +325,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       label: 'PROFESSIONAL TITLE / HEADLINE',
                       child: _ProfileTextField(
                         controller: _headlineController,
-                        hintText: 'A community for Flutter enthusiasts & developers...',
+                        hintText:
+                            'A community for Flutter enthusiasts & developers...',
                       ),
                     ),
                     SizedBox(height: 24.h),
@@ -302,7 +378,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     SizedBox(height: 32.h),
                     _buildSaveButton(),
                     SizedBox(height: 32.h),
-                    _buildPreferencesCard(),
+                    _buildDeleteCard(),
                   ],
                 ),
               ),
@@ -383,10 +459,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  Widget _buildLabeledField({
-    required String label,
-    required Widget child,
-  }) {
+  Widget _buildLabeledField({required String label, required Widget child}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -441,21 +514,28 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  Widget _buildPreferencesCard() {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(20.w),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Text(
-        'Preferences',
-        style: textStyle_16BoldBlack().copyWith(
-          fontSize: 18.sp,
-          fontWeight: FontWeight.w700,
-        ),
+  Widget _buildDeleteCard() {
+    return Center(
+      child: TextButton(
+        onPressed: _isDeleting || _isLoading ? null : _confirmDeleteAccount,
+        style: TextButton.styleFrom(foregroundColor: AppColors.warning),
+        child: _isDeleting
+            ? SizedBox(
+                height: 20.h,
+                width: 20.w,
+                child: const CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: AppColors.warning,
+                ),
+              )
+            : Text(
+                'Delete Account',
+                style: textStyle_16BoldBlack().copyWith(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.warning,
+                ),
+              ),
       ),
     );
   }

@@ -26,7 +26,11 @@ class StatItem extends StatelessWidget {
           SizedBox(height: 4.h),
           Text(
             label,
-            style: TextStyle(fontSize: 9.sp, color: Colors.grey, letterSpacing: 0.5),
+            style: TextStyle(
+              fontSize: 9.sp,
+              color: Colors.grey,
+              letterSpacing: 0.5,
+            ),
           ),
         ],
       ),

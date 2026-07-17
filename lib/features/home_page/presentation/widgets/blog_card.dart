@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/cache/blog_like_cache.dart';
 import '../../../../core/utils/app_colors.dart';
 import '../../../../core/utils/app_image.dart';
+import '../../../blog_detail/presentation/widgets/blog_support_button.dart';
 import '../../domain/entities/blog.dart';
 
 class BlogCard extends StatelessWidget {
@@ -13,16 +15,21 @@ class BlogCard extends StatelessWidget {
 
   const BlogCard({super.key, required this.blog});
 
-  String _previewText(String content) => parseQuillContent(content);
+  String? _previewText(String content) {
+    final preview = parseQuillContent(content).trim();
+    return preview.isEmpty ? null : preview;
+  }
 
   @override
   Widget build(BuildContext context) {
     final authors = blog.allAuthors;
     final hasCoauthors = authors.length > 1;
     final authorNames = authors.map((a) => a.name).join(', ');
-    final hasCommunity = blog.communityName != null &&
-        blog.communityName!.trim().isNotEmpty;
+    final hasCommunity =
+        blog.communityName != null && blog.communityName!.trim().isNotEmpty;
     final hasCategory = blog.category.isNotEmpty;
+
+    final preview = _previewText(blog.content);
 
     return GestureDetector(
       onTap: () => context.push('/blog/${blog.id}', extra: blog),
@@ -114,16 +121,25 @@ class BlogCard extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-            SizedBox(height: 10.h),
-            Text(
-              _previewText(blog.content),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: textStyle_14RegularGrey().copyWith(
-                fontSize: 14.sp,
-                color: AppColors.subtitles,
-                height: 1.45,
+            if (preview != null) ...[
+              SizedBox(height: 10.h),
+              Text(
+                preview,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: textStyle_14RegularGrey().copyWith(
+                  fontSize: 14.sp,
+                  color: AppColors.subtitles,
+                  height: 1.45,
+                ),
               ),
+            ],
+            SizedBox(height: 14.h),
+            BlogSupportButton(
+              blogId: blog.id,
+              initialLikeCount: blog.likeCount,
+              initialIsLiked: BlogLikeCache.instance.isLiked(blog.id),
+              compact: true,
             ),
           ],
         ),
@@ -133,10 +149,7 @@ class BlogCard extends StatelessWidget {
 }
 
 class _CommunityTag extends StatelessWidget {
-  const _CommunityTag({
-    required this.name,
-    this.logoUrl,
-  });
+  const _CommunityTag({required this.name, this.logoUrl});
 
   final String name;
   final String? logoUrl;
@@ -200,7 +213,11 @@ class _AuthorAvatarStack extends StatelessWidget {
       return CircleAvatar(
         radius: 16.r,
         backgroundColor: Colors.grey.shade200,
-        backgroundImage: imageProviderFromSource(author.avatarUrl),
+        backgroundImage: imageProviderFromSource(
+          author.avatarUrl,
+          width: 32,
+          height: 32,
+        ),
         child: author.avatarUrl == null
             ? Icon(Icons.person, size: 18.r, color: Colors.grey)
             : null,
@@ -231,11 +248,13 @@ class _AuthorAvatarStack extends StatelessWidget {
                 child: CircleAvatar(
                   radius: radius - 1.5,
                   backgroundColor: Colors.grey.shade200,
-                  backgroundImage:
-                      imageProviderFromSource(visible[i].avatarUrl),
+                  backgroundImage: imageProviderFromSource(
+                    visible[i].avatarUrl,
+                    width: 28,
+                    height: 28,
+                  ),
                   child: visible[i].avatarUrl == null
-                      ? Icon(Icons.person,
-                          size: radius, color: Colors.grey)
+                      ? Icon(Icons.person, size: radius, color: Colors.grey)
                       : null,
                 ),
               ),

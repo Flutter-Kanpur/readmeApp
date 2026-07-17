@@ -1,5 +1,8 @@
+import 'package:Readme/core/cache/blog_feed_cache.dart';
+import 'package:Readme/core/cache/blog_like_cache.dart';
 import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/text_style.dart';
+import 'package:Readme/features/blog_detail/data/datasource/blog_like_datasource.dart';
 import 'package:Readme/features/home_page/data/datasource/blog_remote_datasource.dart';
 import 'package:Readme/features/home_page/presentation/state/article_category_filters.dart';
 import 'package:Readme/features/home_page/presentation/widgets/blog_card_shimmer.dart';
@@ -33,21 +36,76 @@ class _SearchScreenState extends State<SearchScreen> {
     _loadArticles();
   }
 
-  Future<void> _loadArticles() async {
+  List<ExploreArticle> _articlesFromCache() {
+    final blogs = BlogFeedCache.instance.blogs;
+    if (blogs == null) return [];
+
+    return blogs
+        .map(
+          (blog) => ExploreArticle(
+            blog: blog,
+            authors: blog.allAuthors,
+            communityName: blog.communityName,
+            communityLogoUrl: blog.communityLogoUrl,
+          ),
+        )
+        .toList();
+  }
+
+  Future<void> _loadArticles({bool forceRefresh = false}) async {
     if (!mounted) return;
+
+    if (!forceRefresh && BlogFeedCache.instance.isFresh) {
+      final cachedArticles = _articlesFromCache();
+      setState(() {
+        _articles = cachedArticles;
+        _isLoading = false;
+      });
+      await _preloadLikeState(cachedArticles);
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
-      final articles = await _datasource.fetchExploreArticles();
+      final blogs = await BlogFeedCache.instance.load(
+        () async => (await _datasource.fetchExploreArticles())
+            .map((article) => article.blog)
+            .toList(),
+      );
+      final articles = blogs
+          .map(
+            (blog) => ExploreArticle(
+              blog: blog,
+              authors: blog.allAuthors,
+              communityName: blog.communityName,
+              communityLogoUrl: blog.communityLogoUrl,
+            ),
+          )
+          .toList();
       if (!mounted) return;
       setState(() {
         _articles = articles;
         _isLoading = false;
       });
+      await _preloadLikeState(articles);
     } catch (_) {
       if (!mounted) return;
       setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _preloadLikeState(List<ExploreArticle> articles) async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null || articles.isEmpty || !mounted) return;
+
+    await BlogLikeCache.instance.preload(
+      userId: user.id,
+      blogIds: articles.map((article) => article.blog.id).toList(),
+      datasource: BlogLikeDatasource(Supabase.instance.client),
+    );
+
+    if (mounted) setState(() {});
   }
 
   List<ExploreArticle> get _filteredArticles {
@@ -81,7 +139,7 @@ class _SearchScreenState extends State<SearchScreen> {
         backgroundColor: Colors.transparent,
         body: SafeArea(
           child: RefreshIndicator(
-            onRefresh: _loadArticles,
+            onRefresh: () => _loadArticles(forceRefresh: true),
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(
                 parent: BouncingScrollPhysics(),
@@ -128,7 +186,8 @@ class _SearchScreenState extends State<SearchScreen> {
                               isSelected: _selectedFilter.isForYou,
                               onTap: () {
                                 setState(() {
-                                  _selectedFilter = ArticleCategoryFilter.forYou;
+                                  _selectedFilter =
+                                      ArticleCategoryFilter.forYou;
                                 });
                               },
                             ),
@@ -215,9 +274,7 @@ class _FilterChip extends StatelessWidget {
           decoration: BoxDecoration(
             color: isSelected ? AppColors.black : Colors.white,
             borderRadius: BorderRadius.circular(999),
-            border: isSelected
-                ? null
-                : Border.all(color: Colors.grey.shade200),
+            border: isSelected ? null : Border.all(color: Colors.grey.shade200),
             boxShadow: isSelected
                 ? null
                 : [

@@ -11,12 +11,16 @@ class CommunityRemoteDatasource {
   CommunityRemoteDatasource(this.client);
 
   final SupabaseClient client;
+  static const _defaultPageSize = 30;
 
   Future<List<CommunityModel>> fetchCommunities() async {
     final response = await client
         .from('communities')
-        .select()
-        .order('created_at', ascending: false);
+        .select(
+          'id, name, slug, description, logo_url, created_by, created_at, updated_at',
+        )
+        .order('created_at', ascending: false)
+        .limit(_defaultPageSize);
 
     return response
         .map<CommunityModel>((row) => CommunityModel.fromJson(row))
@@ -35,14 +39,14 @@ class CommunityRemoteDatasource {
   }
 
   Future<CommunityStats> fetchCommunityStats(String communityId) async {
-    final members = await client
+    final memberCount = await client
         .from('community_members')
-        .select('id')
+        .count(CountOption.exact)
         .eq('community_id', communityId);
 
-    final blogs = await client
+    final publishedCount = await client
         .from('blogs')
-        .select('blog_id')
+        .count(CountOption.exact)
         .eq('community_id', communityId)
         .eq('is_published', true);
 
@@ -54,19 +58,17 @@ class CommunityRemoteDatasource {
     }
 
     return CommunityStats(
-      memberCount: (members as List).length,
+      memberCount: memberCount,
       followerCount: followerCount,
-      publishedCount: (blogs as List).length,
+      publishedCount: publishedCount,
     );
   }
 
   Future<int> fetchCommunityFollowerCount(String communityId) async {
-    final response = await client
+    return client
         .from('community_followers')
-        .select('id')
+        .count(CountOption.exact)
         .eq('community_id', communityId);
-
-    return (response as List).length;
   }
 
   Future<bool> isFollowingCommunity({
@@ -112,9 +114,7 @@ class CommunityRemoteDatasource {
   Future<List<CommunityArticle>> fetchCommunityArticles(
     String communityId,
   ) async {
-    final response = await client
-        .from('blogs')
-        .select('''
+    const selectBase = '''
       blog_id,
       author_id,
       title,
@@ -135,14 +135,38 @@ class CommunityRemoteDatasource {
           avatar_url
         )
       )
-    ''')
-        .eq('community_id', communityId)
-        .eq('is_published', true)
-        .order('created_at', ascending: false);
+    ''';
+    const selectWithLikes =
+        '''
+      $selectBase,
+      blog_likes (count)
+    ''';
 
-    return response
-        .map<CommunityArticle>((row) => CommunityArticle.fromJson(row))
-        .toList();
+    Future<List<CommunityArticle>> run(String select) async {
+      final response = await client
+          .from('blogs')
+          .select(select)
+          .eq('community_id', communityId)
+          .eq('is_published', true)
+          .order('created_at', ascending: false)
+          .limit(_defaultPageSize);
+      return response
+          .map<CommunityArticle>((row) => CommunityArticle.fromJson(row))
+          .toList();
+    }
+
+    try {
+      return await run(selectWithLikes);
+    } catch (e) {
+      final message = e.toString().toLowerCase();
+      final likesMissing =
+          message.contains('blog_likes') ||
+          message.contains('could not find') ||
+          message.contains('relationship') ||
+          message.contains('pgrst200');
+      if (!likesMissing) rethrow;
+      return run(selectBase);
+    }
   }
 
   Future<bool> isCommunityMember(String communityId, String userId) async {
@@ -202,7 +226,8 @@ class CommunityRemoteDatasource {
           .maybeSingle();
     } on PostgrestException catch (e) {
       // Schema may not yet have requested_role.
-      final missingColumn = e.code == '42703' ||
+      final missingColumn =
+          e.code == '42703' ||
           e.message.toLowerCase().contains('requested_role');
       if (!missingColumn) rethrow;
       response = await client
@@ -215,10 +240,7 @@ class CommunityRemoteDatasource {
     }
 
     if (response == null) return null;
-    return CommunityJoinRequest.fromJson({
-      ...response,
-      'profiles': null,
-    });
+    return CommunityJoinRequest.fromJson({...response, 'profiles': null});
   }
 
   /// Cancels a pending join request submitted by the user.
@@ -241,7 +263,8 @@ class CommunityRemoteDatasource {
         'requested_role': role,
       });
     } on PostgrestException catch (e) {
-      final missingColumn = e.code == '42703' ||
+      final missingColumn =
+          e.code == '42703' ||
           e.message.toLowerCase().contains('requested_role');
       if (!missingColumn) rethrow;
       await client.from('community_join_requests').insert({
@@ -292,7 +315,10 @@ class CommunityRemoteDatasource {
   }
 
   Future<void> updateMemberRole(String memberId, String role) async {
-    await client.from('community_members').update({'role': role}).eq('id', memberId);
+    await client
+        .from('community_members')
+        .update({'role': role})
+        .eq('id', memberId);
   }
 
   Future<void> removeMember(String memberId) async {
@@ -345,10 +371,13 @@ class CommunityRemoteDatasource {
 
     final userId = request['user_id'] as String;
 
-    await client.from('community_join_requests').update({
-      'status': 'approved',
-      'reviewed_by': client.auth.currentUser?.id,
-    }).eq('id', requestId);
+    await client
+        .from('community_join_requests')
+        .update({
+          'status': 'approved',
+          'reviewed_by': client.auth.currentUser?.id,
+        })
+        .eq('id', requestId);
 
     final existing = await client
         .from('community_members')
@@ -367,10 +396,13 @@ class CommunityRemoteDatasource {
   }
 
   Future<void> rejectJoinRequest(String requestId) async {
-    await client.from('community_join_requests').update({
-      'status': 'rejected',
-      'reviewed_by': client.auth.currentUser?.id,
-    }).eq('id', requestId);
+    await client
+        .from('community_join_requests')
+        .update({
+          'status': 'rejected',
+          'reviewed_by': client.auth.currentUser?.id,
+        })
+        .eq('id', requestId);
   }
 
   Future<String> uploadCommunityLogo({
@@ -379,7 +411,9 @@ class CommunityRemoteDatasource {
     required String fileExt,
   }) async {
     final fileName = '$communityId/logo.$fileExt';
-    await client.storage.from('community-logos').uploadBinary(
+    await client.storage
+        .from('community-logos')
+        .uploadBinary(
           fileName,
           bytes,
           fileOptions: FileOptions(upsert: true, contentType: 'image/$fileExt'),
@@ -392,10 +426,13 @@ class CommunityRemoteDatasource {
     required String communityId,
     required String logoUrl,
   }) async {
-    await client.from('communities').update({
-      'logo_url': logoUrl,
-      'updated_at': DateTime.now().toIso8601String(),
-    }).eq('id', communityId);
+    await client
+        .from('communities')
+        .update({
+          'logo_url': logoUrl,
+          'updated_at': DateTime.now().toIso8601String(),
+        })
+        .eq('id', communityId);
   }
 
   // ============================================================
@@ -420,9 +457,11 @@ class CommunityRemoteDatasource {
     final list = subs as List;
     final isSubscribed = viewerEmail == null
         ? false
-        : list.any((row) =>
-            (row['email'] as String?)?.toLowerCase() ==
-            viewerEmail.toLowerCase());
+        : list.any(
+            (row) =>
+                (row['email'] as String?)?.toLowerCase() ==
+                viewerEmail.toLowerCase(),
+          );
 
     return CommunityNewsletterStats(
       subscriberCount: list.length,
@@ -491,7 +530,9 @@ class CommunityRemoteDatasource {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final safeName = fileName.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '_');
     final path = '$communityId/$timestamp-$safeName';
-    await client.storage.from('newsletter-attachments').uploadBinary(
+    await client.storage
+        .from('newsletter-attachments')
+        .uploadBinary(
           path,
           bytes,
           fileOptions: FileOptions(upsert: true, contentType: contentType),

@@ -190,10 +190,7 @@ class _EmptyState extends StatelessWidget {
 }
 
 class _ErrorState extends StatelessWidget {
-  const _ErrorState({
-    required this.message,
-    required this.onRetry,
-  });
+  const _ErrorState({required this.message, required this.onRetry});
 
   final String message;
   final VoidCallback onRetry;
@@ -219,10 +216,7 @@ class _ErrorState extends StatelessWidget {
               style: textStyle_14RegularGrey().copyWith(fontSize: 13.sp),
             ),
             SizedBox(height: 20.h),
-            OutlinedButton(
-              onPressed: onRetry,
-              child: const Text('Try again'),
-            ),
+            OutlinedButton(onPressed: onRetry, child: const Text('Try again')),
           ],
         ),
       ),

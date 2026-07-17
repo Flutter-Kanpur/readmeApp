@@ -16,6 +16,7 @@ class BlogModel extends Blog {
     super.communityId,
     super.communityName,
     super.communityLogoUrl,
+    super.likeCount,
   });
 
   factory BlogModel.fromJson(
@@ -50,7 +51,9 @@ class BlogModel extends Blog {
     return BlogModel(
       id: json['blog_id'],
       title: json['title'],
-      content: normalizeRawContent(json['content']),
+      content: json['content'] == null
+          ? ''
+          : normalizeRawContent(json['content']),
       coverImage: json['cover_image'],
       category: json['category'] ?? '',
       createdAt: DateTime.parse(json['created_at']),
@@ -61,6 +64,24 @@ class BlogModel extends Blog {
       communityLogoUrl: community?['logo_url'] as String?,
       author: primaryAuthor,
       coauthors: coauthors,
+      likeCount: _parseLikeCount(json),
     );
+  }
+
+  static int _parseLikeCount(Map<String, dynamic> json) {
+    final direct = json['like_count'];
+    if (direct is int) return direct;
+    if (direct is num) return direct.toInt();
+
+    final likes = json['blog_likes'];
+    if (likes is List && likes.isNotEmpty) {
+      final first = likes.first;
+      if (first is Map) {
+        final count = first['count'];
+        if (count is int) return count;
+        if (count is num) return count.toInt();
+      }
+    }
+    return 0;
   }
 }

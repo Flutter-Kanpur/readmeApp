@@ -10,9 +10,6 @@ final List<BlogModel> dummyBlogs = [
     category: 'for_you',
     createdAt: DateTime.now(),
     isPublished: true,
-    author: const Author(
-      name: 'Readme Team',
-      avatarUrl: null,
-    ),
+    author: const Author(name: 'Readme Team', avatarUrl: null),
   ),
 ];

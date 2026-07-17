@@ -45,5 +45,18 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.flutterkanpur.readme</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.flutterkanpur.readme</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

@@ -10,6 +10,7 @@ TextStyle textStyle_16RegularGrey() {
     height: 1.0,
   );
 }
+
 TextStyle textStyle_24RegularGrey() {
   return TextStyle(
     fontFamily: 'ProductSans',
@@ -19,6 +20,7 @@ TextStyle textStyle_24RegularGrey() {
     height: 1.0,
   );
 }
+
 TextStyle textStyle_14RegularGrey() {
   return TextStyle(
     fontFamily: 'ProductSans',
@@ -28,6 +30,7 @@ TextStyle textStyle_14RegularGrey() {
     height: 1.0,
   );
 }
+
 TextStyle textStyle_12LightGrey() {
   return TextStyle(
     fontFamily: 'ProductSans',
@@ -37,6 +40,7 @@ TextStyle textStyle_12LightGrey() {
     height: 1.2,
   );
 }
+
 TextStyle textStyle_12RegularGrey() {
   return TextStyle(
     fontFamily: 'ProductSans',
@@ -46,6 +50,7 @@ TextStyle textStyle_12RegularGrey() {
     height: 1.0,
   );
 }
+
 TextStyle textStyle_14RegularBlack() {
   return TextStyle(
     fontFamily: 'ProductSans',
@@ -55,6 +60,7 @@ TextStyle textStyle_14RegularBlack() {
     height: 1.0,
   );
 }
+
 TextStyle textStyle_14MediumGreyHintStyle() {
   return TextStyle(
     fontFamily: 'ProductSans',
@@ -64,6 +70,7 @@ TextStyle textStyle_14MediumGreyHintStyle() {
     height: 1.0,
   );
 }
+
 TextStyle textStyle_14LightBlack() {
   return TextStyle(
     fontFamily: 'ProductSans',
@@ -73,6 +80,7 @@ TextStyle textStyle_14LightBlack() {
     height: 1.0,
   );
 }
+
 TextStyle textStyle_24BoldBlack() {
   return TextStyle(
     fontFamily: 'ProductSans',
@@ -83,6 +91,7 @@ TextStyle textStyle_24BoldBlack() {
     // letterSpacing: 1.0
   );
 }
+
 TextStyle textStyle_16RegularBlack() {
   return TextStyle(
     fontFamily: 'ProductSans',
@@ -92,6 +101,7 @@ TextStyle textStyle_16RegularBlack() {
     height: 1.0,
   );
 }
+
 TextStyle textStyle_16BoldBlack() {
   return TextStyle(
     fontFamily: 'ProductSans',
@@ -102,8 +112,6 @@ TextStyle textStyle_16BoldBlack() {
   );
 }
 
-
-
 TextStyle textStyle_16RegularWhite() {
   return TextStyle(
     fontFamily: 'ProductSans',
@@ -113,6 +121,7 @@ TextStyle textStyle_16RegularWhite() {
     height: 1.0,
   );
 }
+
 TextStyle textStyle_10White() {
   return TextStyle(
     fontFamily: 'ProductSans',
@@ -122,6 +131,7 @@ TextStyle textStyle_10White() {
     height: 1.0,
   );
 }
+
 TextStyle textStyle_36SemiBoldWhite() {
   return TextStyle(
     fontFamily: 'ProductSans',
@@ -141,6 +151,7 @@ TextStyle textStyle_16RegularLinkBlue() {
     height: 1.0,
   );
 }
+
 TextStyle textStyle_14RegularLinkBlue() {
   return TextStyle(
     fontFamily: 'ProductSans',
@@ -150,6 +161,7 @@ TextStyle textStyle_14RegularLinkBlue() {
     height: 1.0,
   );
 }
+
 TextStyle textStyle_16BoldLinkBlue() {
   return TextStyle(
     fontFamily: 'ProductSans',
@@ -173,7 +185,7 @@ TextStyle textStyle_14BoldLinkBlue() {
 TextStyle textStyle_36semiBoldWhite() {
   return TextStyle(
     fontFamily: 'ProductSans',
-    fontSize:36.sp,
+    fontSize: 36.sp,
     fontWeight: FontWeight.w700,
     color: const Color(0xFFFFFFFF),
     height: 1.0,

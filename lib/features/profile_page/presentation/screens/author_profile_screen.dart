@@ -13,10 +13,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthorProfileScreen extends StatefulWidget {
-  const AuthorProfileScreen({
-    super.key,
-    required this.userId,
-  });
+  const AuthorProfileScreen({super.key, required this.userId});
 
   final String userId;
 
@@ -42,8 +39,7 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen> {
   bool _followActionLoading = false;
   String? _error;
 
-  bool get _isSelf =>
-      _supabase.auth.currentUser?.id == widget.userId;
+  bool get _isSelf => _supabase.auth.currentUser?.id == widget.userId;
 
   @override
   void initState() {
@@ -58,8 +54,9 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen> {
     });
 
     try {
-      final profileData =
-          await _profileDatasource.fetchProfileById(widget.userId);
+      final profileData = await _profileDatasource.fetchProfileById(
+        widget.userId,
+      );
       if (profileData == null) {
         if (!mounted) return;
         setState(() {
@@ -69,10 +66,12 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen> {
         return;
       }
 
-      final publishedBlogs =
-          await _blogRepository.getBlogsByAuthor(widget.userId);
-      final followStats =
-          await _profileDatasource.fetchFollowStats(widget.userId);
+      final publishedBlogs = await _blogRepository.getBlogsByAuthor(
+        widget.userId,
+      );
+      final followStats = await _profileDatasource.fetchFollowStats(
+        widget.userId,
+      );
 
       var isFollowing = false;
       final currentUser = _supabase.auth.currentUser;
@@ -145,11 +144,7 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen> {
         );
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            e.toString().replaceFirst('Exception: ', ''),
-          ),
-        ),
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
       );
     } finally {
       if (mounted) setState(() => _followActionLoading = false);
@@ -187,34 +182,34 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen> {
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
-                ? _ErrorView(message: _error!, onBack: () => context.pop())
-                : RefreshIndicator(
-                    onRefresh: _loadProfile,
-                    child: SingleChildScrollView(
-                      physics: const AlwaysScrollableScrollPhysics(
-                        parent: BouncingScrollPhysics(),
-                      ),
-                      padding: EdgeInsets.fromLTRB(20.w, 8.h, 20.w, 40.h),
-                      child: Column(
-                        children: [
-                          _buildBackLink(),
-                          SizedBox(height: 24.h),
-                          _buildProfileHeader(),
-                          SizedBox(height: 32.h),
-                          Divider(color: Colors.grey.shade200, height: 1),
-                          SizedBox(height: 24.h),
-                          _buildPublishedSection(),
-                          SizedBox(height: 32.h),
-                          UserStatsCard(
-                            memberSince: _memberSince,
-                            followers: _followStats.followers,
-                            following: _followStats.following,
-                            totalArticles: _publishedBlogs.length,
-                          ),
-                        ],
-                      ),
-                    ),
+            ? _ErrorView(message: _error!, onBack: () => context.pop())
+            : RefreshIndicator(
+                onRefresh: _loadProfile,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(
+                    parent: BouncingScrollPhysics(),
                   ),
+                  padding: EdgeInsets.fromLTRB(20.w, 8.h, 20.w, 40.h),
+                  child: Column(
+                    children: [
+                      _buildBackLink(),
+                      SizedBox(height: 24.h),
+                      _buildProfileHeader(),
+                      SizedBox(height: 32.h),
+                      Divider(color: Colors.grey.shade200, height: 1),
+                      SizedBox(height: 24.h),
+                      _buildPublishedSection(),
+                      SizedBox(height: 32.h),
+                      UserStatsCard(
+                        memberSince: _memberSince,
+                        followers: _followStats.followers,
+                        following: _followStats.following,
+                        totalArticles: _publishedBlogs.length,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
       ),
     );
   }
@@ -363,10 +358,7 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen> {
 }
 
 class _ErrorView extends StatelessWidget {
-  const _ErrorView({
-    required this.message,
-    required this.onBack,
-  });
+  const _ErrorView({required this.message, required this.onBack});
 
   final String message;
   final VoidCallback onBack;

@@ -10,10 +10,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthorFollowCard extends StatefulWidget {
-  const AuthorFollowCard({
-    super.key,
-    required this.author,
-  });
+  const AuthorFollowCard({super.key, required this.author});
 
   final Author author;
 
@@ -102,20 +99,13 @@ class _AuthorFollowCardState extends State<AuthorFollowCard> {
           authorId: authorId,
         );
       } else {
-        await _datasource.followAuthor(
-          followerId: user.id,
-          authorId: authorId,
-        );
+        await _datasource.followAuthor(followerId: user.id, authorId: authorId);
       }
     } catch (e) {
       if (!mounted) return;
       setState(() => _isFollowing = wasFollowing);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            e.toString().replaceFirst('Exception: ', ''),
-          ),
-        ),
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
       );
     } finally {
       if (mounted) setState(() => _actionLoading = false);
@@ -146,8 +136,9 @@ class _AuthorFollowCardState extends State<AuthorFollowCard> {
                 child: CircleAvatar(
                   radius: 32.r,
                   backgroundColor: Colors.grey.shade200,
-                  backgroundImage:
-                      imageProviderFromSource(widget.author.avatarUrl),
+                  backgroundImage: imageProviderFromSource(
+                    widget.author.avatarUrl,
+                  ),
                   child: widget.author.avatarUrl == null
                       ? Text(
                           widget.author.name.isNotEmpty

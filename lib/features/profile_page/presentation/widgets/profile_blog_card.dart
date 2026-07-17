@@ -1,24 +1,24 @@
+import 'package:Readme/core/cache/blog_like_cache.dart';
 import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/app_image.dart';
 import 'package:Readme/core/utils/quill_content_parser.dart';
 import 'package:Readme/core/utils/text_style.dart';
+import 'package:Readme/features/blog_detail/presentation/widgets/blog_support_button.dart';
 import 'package:Readme/features/home_page/domain/entities/blog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
 class ProfileBlogCard extends StatelessWidget {
-  const ProfileBlogCard({
-    super.key,
-    required this.blog,
-    this.onEdit,
-  });
+  const ProfileBlogCard({super.key, required this.blog, this.onEdit});
 
   final Blog blog;
   final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
+    final preview = parseQuillContent(blog.content).trim();
+
     return Container(
       padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
@@ -34,8 +34,11 @@ class ProfileBlogCard extends StatelessWidget {
               CircleAvatar(
                 radius: 16.r,
                 backgroundColor: Colors.grey.shade200,
-                backgroundImage:
-                    imageProviderFromSource(blog.author.avatarUrl),
+                backgroundImage: imageProviderFromSource(
+                  blog.author.avatarUrl,
+                  width: 32,
+                  height: 32,
+                ),
                 child: blog.author.avatarUrl == null
                     ? Icon(Icons.person, size: 18.r, color: Colors.grey)
                     : null,
@@ -59,8 +62,10 @@ class ProfileBlogCard extends StatelessWidget {
                   onTap: onEdit,
                   borderRadius: BorderRadius.circular(999),
                   child: Padding(
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 14.w,
+                      vertical: 8.h,
+                    ),
                     child: Text(
                       'Edit Blog',
                       style: textStyle_14RegularBlack().copyWith(
@@ -90,16 +95,25 @@ class ProfileBlogCard extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-                SizedBox(height: 10.h),
-                Text(
-                  parseQuillContent(blog.content),
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: textStyle_14RegularGrey().copyWith(
-                    fontSize: 14.sp,
-                    color: AppColors.subtitles,
-                    height: 1.45,
+                if (preview.isNotEmpty) ...[
+                  SizedBox(height: 10.h),
+                  Text(
+                    preview,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: textStyle_14RegularGrey().copyWith(
+                      fontSize: 14.sp,
+                      color: AppColors.subtitles,
+                      height: 1.45,
+                    ),
                   ),
+                ],
+                SizedBox(height: 14.h),
+                BlogSupportButton(
+                  blogId: blog.id,
+                  initialLikeCount: blog.likeCount,
+                  initialIsLiked: BlogLikeCache.instance.isLiked(blog.id),
+                  compact: true,
                 ),
               ],
             ),

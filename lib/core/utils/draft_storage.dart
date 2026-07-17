@@ -36,14 +36,9 @@ class DraftStorage {
     if (title.trim().isEmpty && content.trim().isEmpty) return null;
 
     final savedAtIso = prefs.getString(_draftSavedAtKey);
-    final savedAt =
-        savedAtIso != null ? DateTime.tryParse(savedAtIso) : null;
+    final savedAt = savedAtIso != null ? DateTime.tryParse(savedAtIso) : null;
 
-    return DraftEntry(
-      title: title,
-      content: content,
-      savedAt: savedAt,
-    );
+    return DraftEntry(title: title, content: content, savedAt: savedAt);
   }
 
   static Future<void> setSavedAt(DateTime when) async {

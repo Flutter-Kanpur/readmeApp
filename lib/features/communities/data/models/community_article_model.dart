@@ -2,10 +2,7 @@ import 'package:Readme/features/home_page/data/models/blog_model.dart';
 import 'package:Readme/features/home_page/domain/entities/blog.dart';
 
 class CommunityArticle {
-  const CommunityArticle({
-    required this.blog,
-    required this.authors,
-  });
+  const CommunityArticle({required this.blog, required this.authors});
 
   final Blog blog;
   final List<Author> authors;

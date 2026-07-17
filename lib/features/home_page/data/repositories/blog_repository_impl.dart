@@ -16,4 +16,9 @@ class BlogRepositoryImpl implements BlogRepository {
   Future<List<Blog>> getBlogsByAuthor(String authorId) async {
     return remoteDatasource.fetchBlogsByAuthor(authorId);
   }
+
+  @override
+  Future<Blog?> getBlogById(String blogId) async {
+    return remoteDatasource.fetchBlogById(blogId);
+  }
 }

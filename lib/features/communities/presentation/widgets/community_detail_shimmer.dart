@@ -125,10 +125,7 @@ class _HeaderShimmer extends StatelessWidget {
 }
 
 class _ShimmerPillButton extends StatelessWidget {
-  const _ShimmerPillButton({
-    required this.width,
-    required this.dark,
-  });
+  const _ShimmerPillButton({required this.width, required this.dark});
 
   final double width;
   final bool dark;
@@ -138,8 +135,9 @@ class _ShimmerPillButton extends StatelessWidget {
     final baseColor = dark
         ? const Color(0xFFD4D4D4)
         : CommunityDetailShimmer._baseColor;
-    final highlightColor =
-        dark ? const Color(0xFFEFEFEF) : CommunityDetailShimmer._highlightColor;
+    final highlightColor = dark
+        ? const Color(0xFFEFEFEF)
+        : CommunityDetailShimmer._highlightColor;
 
     return Shimmer.fromColors(
       baseColor: baseColor,

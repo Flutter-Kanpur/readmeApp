@@ -1,4 +1,6 @@
+import 'package:Readme/features/auth/presentation/pages/forgot_password_screen.dart';
 import 'package:Readme/features/auth/presentation/pages/login_with_email.dart';
+import 'package:Readme/features/auth/presentation/pages/reset_password_screen.dart';
 import 'package:Readme/features/auth/presentation/pages/welcome_screen.dart';
 import 'package:Readme/features/auth/presentation/pages/signup_screen.dart';
 import 'package:Readme/features/create_blog_page/presentation/pages/create_blog_screen.dart';
@@ -14,7 +16,7 @@ import 'package:Readme/features/communities/presentation/pages/communities_scree
 import 'package:Readme/features/communities/presentation/pages/community_dashboard_screen.dart';
 import 'package:Readme/features/communities/presentation/pages/community_detail_screen.dart';
 import 'package:Readme/features/communities/domain/entities/community.dart';
-import 'package:Readme/features/blog_detail/presentation/pages/blog_detail_screen.dart';
+import 'package:Readme/features/blog_detail/presentation/pages/blog_detail_loader.dart';
 import 'package:Readme/features/home_page/domain/entities/blog.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -48,7 +50,7 @@ CustomTransitionPage<void> _fadeSlideTransitionPage({
   );
 }
 
-class AppRouter{
+class AppRouter {
   static final GoRouter router = GoRouter(
     initialLocation: '/',
     routes: [
@@ -71,6 +73,19 @@ class AppRouter{
         path: '/signup',
         name: 'signup',
         builder: (context, state) => const SignUpScreen(),
+      ),
+      GoRoute(
+        path: '/forgot-password',
+        name: 'forgot_password',
+        builder: (context, state) {
+          final email = state.extra as String?;
+          return ForgotPasswordScreen(initialEmail: email);
+        },
+      ),
+      GoRoute(
+        path: '/reset-password',
+        name: 'reset_password',
+        builder: (context, state) => const ResetPasswordScreen(),
       ),
       // Edit Profile route outside ShellRoute to hide bottom nav bar
       GoRoute(
@@ -97,7 +112,7 @@ class AppRouter{
         name: 'blog_detail',
         builder: (context, state) {
           final blog = state.extra as Blog;
-          return BlogDetailScreen(blog: blog);
+          return BlogDetailLoader(blog: blog);
         },
       ),
       GoRoute(

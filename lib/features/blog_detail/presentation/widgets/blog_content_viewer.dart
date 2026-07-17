@@ -11,6 +11,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 class BlogContentViewer extends StatefulWidget {
   const BlogContentViewer({
     super.key,
@@ -31,19 +32,19 @@ class _BlogContentViewerState extends State<BlogContentViewer> {
   quill.QuillController? _controller;
 
   TextStyle get _bodySerif => TextStyle(
-        fontFamily: 'ProductSans',
-        fontSize: 20.sp,
-        height: 1.65,
-        color: AppColors.black,
-      );
+    fontFamily: 'ProductSans',
+    fontSize: 20.sp,
+    height: 1.65,
+    color: AppColors.black,
+  );
 
   TextStyle get _introSans => TextStyle(
     fontFamily: 'ProductSans',
-        fontSize: 22.sp,
-        height: 1.55,
-        color: AppColors.subtitles,
-        fontWeight: FontWeight.w400,
-      );
+    fontSize: 22.sp,
+    height: 1.55,
+    color: AppColors.subtitles,
+    fontWeight: FontWeight.w400,
+  );
 
   String get _normalizedContent => normalizeForRendering(widget.content);
 
@@ -189,8 +190,9 @@ class _BlogContentViewerState extends State<BlogContentViewer> {
         base.quote!.decoration,
       ),
       bold: base.bold?.merge(_bodySerif.copyWith(fontWeight: FontWeight.w700)),
-      italic:
-          base.italic?.merge(_bodySerif.copyWith(fontStyle: FontStyle.italic)),
+      italic: base.italic?.merge(
+        _bodySerif.copyWith(fontStyle: FontStyle.italic),
+      ),
       link: base.link,
       placeHolder: base.placeHolder,
     );
@@ -266,11 +268,13 @@ class _BlogContentViewerState extends State<BlogContentViewer> {
         fontStyle: FontStyle.italic,
       ),
       'ul': Style(
-          fontFamily: sansFamily,
-          margin: Margins.only(left: 8, bottom: 18)),
+        fontFamily: sansFamily,
+        margin: Margins.only(left: 8, bottom: 18),
+      ),
       'ol': Style(
-          fontFamily: sansFamily,
-          margin: Margins.only(left: 8, bottom: 18)),
+        fontFamily: sansFamily,
+        margin: Margins.only(left: 8, bottom: 18),
+      ),
       'li': Style(
         fontFamily: sansFamily,
         fontSize: FontSize(18.sp),
@@ -329,7 +333,10 @@ class _BlogContentViewerState extends State<BlogContentViewer> {
 
   String _codeFromPreBlock(String block) {
     var code = block.trim();
-    code = code.replaceFirst(RegExp(r'^<pre\b[^>]*>', caseSensitive: false), '');
+    code = code.replaceFirst(
+      RegExp(r'^<pre\b[^>]*>', caseSensitive: false),
+      '',
+    );
     code = code.replaceFirst(RegExp(r'</pre>$', caseSensitive: false), '');
     code = code.replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n');
     code = code.replaceAll(RegExp(r'<[^>]+>'), '');
