@@ -123,6 +123,7 @@ class CommunityRemoteDatasource {
       created_at,
       category,
       is_published,
+      view_count,
       profiles!inner (
         id,
         name,
@@ -164,6 +165,25 @@ class CommunityRemoteDatasource {
           message.contains('could not find') ||
           message.contains('relationship') ||
           message.contains('pgrst200');
+      final viewCountMissing = message.contains('view_count');
+      if (viewCountMissing) {
+        final withoutViewCount = selectWithLikes.replaceAll(
+          RegExp(r',\s*view_count'),
+          '',
+        );
+        try {
+          return await run(withoutViewCount);
+        } catch (inner) {
+          final innerMessage = inner.toString().toLowerCase();
+          final likesStillMissing =
+              innerMessage.contains('blog_likes') ||
+              innerMessage.contains('could not find') ||
+              innerMessage.contains('relationship') ||
+              innerMessage.contains('pgrst200');
+          if (!likesStillMissing) rethrow;
+          return run(selectBase.replaceAll(RegExp(r',\s*view_count'), ''));
+        }
+      }
       if (!likesMissing) rethrow;
       return run(selectBase);
     }

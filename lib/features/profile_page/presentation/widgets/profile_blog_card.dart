@@ -4,6 +4,7 @@ import 'package:Readme/core/utils/app_image.dart';
 import 'package:Readme/core/utils/quill_content_parser.dart';
 import 'package:Readme/core/utils/text_style.dart';
 import 'package:Readme/features/blog_detail/presentation/widgets/blog_support_button.dart';
+import 'package:Readme/features/blog_detail/presentation/widgets/blog_view_count.dart';
 import 'package:Readme/features/home_page/domain/entities/blog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -55,28 +56,29 @@ class ProfileBlogCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              Material(
-                color: AppColors.black,
-                borderRadius: BorderRadius.circular(999),
-                child: InkWell(
-                  onTap: onEdit,
+              if (onEdit != null)
+                Material(
+                  color: AppColors.black,
                   borderRadius: BorderRadius.circular(999),
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 14.w,
-                      vertical: 8.h,
-                    ),
-                    child: Text(
-                      'Edit Blog',
-                      style: textStyle_14RegularBlack().copyWith(
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                  child: InkWell(
+                    onTap: onEdit,
+                    borderRadius: BorderRadius.circular(999),
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 14.w,
+                        vertical: 8.h,
+                      ),
+                      child: Text(
+                        'Edit Blog',
+                        style: textStyle_14RegularBlack().copyWith(
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
             ],
           ),
           SizedBox(height: 16.h),
@@ -109,11 +111,17 @@ class ProfileBlogCard extends StatelessWidget {
                   ),
                 ],
                 SizedBox(height: 14.h),
-                BlogSupportButton(
-                  blogId: blog.id,
-                  initialLikeCount: blog.likeCount,
-                  initialIsLiked: BlogLikeCache.instance.isLiked(blog.id),
-                  compact: true,
+                Row(
+                  children: [
+                    BlogSupportButton(
+                      blogId: blog.id,
+                      initialLikeCount: blog.likeCount,
+                      initialIsLiked: BlogLikeCache.instance.isLiked(blog.id),
+                      compact: true,
+                    ),
+                    SizedBox(width: 12.w),
+                    BlogViewCount(count: blog.viewCount),
+                  ],
                 ),
               ],
             ),

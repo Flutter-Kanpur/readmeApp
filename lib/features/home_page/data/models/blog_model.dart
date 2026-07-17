@@ -17,6 +17,7 @@ class BlogModel extends Blog {
     super.communityName,
     super.communityLogoUrl,
     super.likeCount,
+    super.viewCount,
   });
 
   factory BlogModel.fromJson(
@@ -65,6 +66,7 @@ class BlogModel extends Blog {
       author: primaryAuthor,
       coauthors: coauthors,
       likeCount: _parseLikeCount(json),
+      viewCount: _parseViewCount(json),
     );
   }
 
@@ -82,6 +84,14 @@ class BlogModel extends Blog {
         if (count is num) return count.toInt();
       }
     }
+    return 0;
+  }
+
+  static int _parseViewCount(Map<String, dynamic> json) {
+    final direct = json['view_count'];
+    if (direct is int) return direct;
+    if (direct is num) return direct.toInt();
+    if (direct is String) return int.tryParse(direct) ?? 0;
     return 0;
   }
 }

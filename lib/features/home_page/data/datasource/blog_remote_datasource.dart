@@ -21,6 +21,7 @@ class BlogRemoteDatasource {
       category,
       is_published,
       community_id,
+      view_count,
       profiles!inner (
         id,
         name,
@@ -49,6 +50,7 @@ class BlogRemoteDatasource {
       category,
       is_published,
       community_id,
+      view_count,
       profiles!inner (
         id,
         name,
@@ -80,12 +82,24 @@ class BlogRemoteDatasource {
     ''';
 
   bool _likesUnavailable = false;
+  bool _viewCountUnavailable = false;
 
-  String get _blogListSelect =>
-      _likesUnavailable ? _blogListSelectBase : _blogListSelectWithLikes;
+  String get _blogListSelect {
+    var select = _likesUnavailable ? _blogListSelectBase : _blogListSelectWithLikes;
+    if (_viewCountUnavailable) {
+      select = select.replaceAll(RegExp(r',\s*view_count'), '');
+    }
+    return select;
+  }
 
-  String get _blogDetailSelect =>
-      _likesUnavailable ? _blogDetailSelectBase : _blogDetailSelectWithLikes;
+  String get _blogDetailSelect {
+    var select =
+        _likesUnavailable ? _blogDetailSelectBase : _blogDetailSelectWithLikes;
+    if (_viewCountUnavailable) {
+      select = select.replaceAll(RegExp(r',\s*view_count'), '');
+    }
+    return select;
+  }
 
   bool _isMissingLikesRelation(Object error) {
     final message = error.toString().toLowerCase();
@@ -93,6 +107,12 @@ class BlogRemoteDatasource {
         message.contains('could not find') ||
         message.contains('relationship') ||
         message.contains('pgrst200');
+  }
+
+  bool _isMissingViewCount(Object error) {
+    final message = error.toString().toLowerCase();
+    return message.contains('view_count') ||
+        message.contains('column') && message.contains('does not exist');
   }
 
   Future<List<Map<String, dynamic>>> _selectPublishedBlogs({
@@ -115,9 +135,17 @@ class BlogRemoteDatasource {
     try {
       return await run(_blogListSelect);
     } catch (e) {
+      if (!_viewCountUnavailable && _isMissingViewCount(e)) {
+        _viewCountUnavailable = true;
+        return _selectPublishedBlogs(
+          authorId: authorId,
+          limit: limit,
+          offset: offset,
+        );
+      }
       if (_likesUnavailable || !_isMissingLikesRelation(e)) rethrow;
       _likesUnavailable = true;
-      return run(_blogListSelectBase);
+      return run(_blogListSelect);
     }
   }
 
@@ -137,9 +165,13 @@ class BlogRemoteDatasource {
       final row = await run(_blogDetailSelect);
       return row == null ? null : BlogModel.fromJson(row);
     } catch (e) {
+      if (!_viewCountUnavailable && _isMissingViewCount(e)) {
+        _viewCountUnavailable = true;
+        return fetchBlogById(blogId);
+      }
       if (_likesUnavailable || !_isMissingLikesRelation(e)) rethrow;
       _likesUnavailable = true;
-      final row = await run(_blogDetailSelectBase);
+      final row = await run(_blogDetailSelect);
       return row == null ? null : BlogModel.fromJson(row);
     }
   }

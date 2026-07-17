@@ -13,6 +13,7 @@ class Blog {
   final String? communityName;
   final String? communityLogoUrl;
   final int likeCount;
+  final int viewCount;
 
   const Blog({
     required this.id,
@@ -29,6 +30,7 @@ class Blog {
     this.communityName,
     this.communityLogoUrl,
     this.likeCount = 0,
+    this.viewCount = 0,
   });
 
   Blog copyWith({
@@ -46,6 +48,7 @@ class Blog {
     String? communityName,
     String? communityLogoUrl,
     int? likeCount,
+    int? viewCount,
   }) {
     return Blog(
       id: id ?? this.id,
@@ -62,6 +65,7 @@ class Blog {
       communityName: communityName ?? this.communityName,
       communityLogoUrl: communityLogoUrl ?? this.communityLogoUrl,
       likeCount: likeCount ?? this.likeCount,
+      viewCount: viewCount ?? this.viewCount,
     );
   }
 

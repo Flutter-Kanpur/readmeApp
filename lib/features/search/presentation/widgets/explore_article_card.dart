@@ -4,6 +4,7 @@ import 'package:Readme/core/utils/app_image.dart';
 import 'package:Readme/core/utils/quill_content_parser.dart';
 import 'package:Readme/core/utils/text_style.dart';
 import 'package:Readme/features/blog_detail/presentation/widgets/blog_support_button.dart';
+import 'package:Readme/features/blog_detail/presentation/widgets/blog_view_count.dart';
 import 'package:Readme/features/home_page/domain/entities/blog.dart';
 import 'package:Readme/features/search/data/models/explore_article_model.dart';
 import 'package:flutter/material.dart';
@@ -125,11 +126,18 @@ class ExploreArticleCard extends StatelessWidget {
               ),
             ],
             SizedBox(height: 14.h),
-            BlogSupportButton(
-              blogId: article.blog.id,
-              initialLikeCount: article.blog.likeCount,
-              initialIsLiked: BlogLikeCache.instance.isLiked(article.blog.id),
-              compact: true,
+            Row(
+              children: [
+                BlogSupportButton(
+                  blogId: article.blog.id,
+                  initialLikeCount: article.blog.likeCount,
+                  initialIsLiked:
+                      BlogLikeCache.instance.isLiked(article.blog.id),
+                  compact: true,
+                ),
+                SizedBox(width: 12.w),
+                BlogViewCount(count: article.blog.viewCount),
+              ],
             ),
           ],
         ),

@@ -8,6 +8,7 @@ import '../../../../core/cache/blog_like_cache.dart';
 import '../../../../core/utils/app_colors.dart';
 import '../../../../core/utils/app_image.dart';
 import '../../../blog_detail/presentation/widgets/blog_support_button.dart';
+import '../../../blog_detail/presentation/widgets/blog_view_count.dart';
 import '../../domain/entities/blog.dart';
 
 class BlogCard extends StatelessWidget {
@@ -135,11 +136,17 @@ class BlogCard extends StatelessWidget {
               ),
             ],
             SizedBox(height: 14.h),
-            BlogSupportButton(
-              blogId: blog.id,
-              initialLikeCount: blog.likeCount,
-              initialIsLiked: BlogLikeCache.instance.isLiked(blog.id),
-              compact: true,
+            Row(
+              children: [
+                BlogSupportButton(
+                  blogId: blog.id,
+                  initialLikeCount: blog.likeCount,
+                  initialIsLiked: BlogLikeCache.instance.isLiked(blog.id),
+                  compact: true,
+                ),
+                SizedBox(width: 12.w),
+                BlogViewCount(count: blog.viewCount),
+              ],
             ),
           ],
         ),

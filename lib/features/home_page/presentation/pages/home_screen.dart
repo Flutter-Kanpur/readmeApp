@@ -68,7 +68,15 @@ class _HomeScreenState extends State<HomeScreen> {
   double get _statusBarBlend =>
       (_scrollOffset / _statusBarFadeDistance).clamp(0.0, 1.0);
 
-  Future<void> _loadBlogs({bool forceRefresh = false}) async {
+  Future<void> _refreshBlogs() async {
+    BlogFeedCache.instance.invalidate();
+    await _loadBlogs(forceRefresh: true, showSpinner: false);
+  }
+
+  Future<void> _loadBlogs({
+    bool forceRefresh = false,
+    bool showSpinner = true,
+  }) async {
     if (!mounted) return;
 
     if (!forceRefresh && BlogFeedCache.instance.isFresh) {
@@ -81,7 +89,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    setState(() => _isLoadingBlogs = true);
+    if (showSpinner) setState(() => _isLoadingBlogs = true);
 
     try {
       final blogs = await BlogFeedCache.instance.load(blogRepository.getBlogs);
@@ -184,55 +192,61 @@ class _HomeScreenState extends State<HomeScreen> {
                     horizontal: 20.0,
                     vertical: 0,
                   ),
-                  child: CustomScrollView(
-                    controller: _scrollController,
-                    slivers: [
-                      SliverToBoxAdapter(child: SizedBox(height: 40.h)),
-                      SliverToBoxAdapter(
-                        child: HomeHeroSection(
-                          onStartWriting: () => context.push('/create'),
-                          onExploreTopics: () => context.go('/search'),
-                        ),
+                  child: RefreshIndicator(
+                    onRefresh: _refreshBlogs,
+                    child: CustomScrollView(
+                      controller: _scrollController,
+                      physics: const AlwaysScrollableScrollPhysics(
+                        parent: BouncingScrollPhysics(),
                       ),
-                      SliverToBoxAdapter(
-                        child: HomeArticlesSection(
-                          onSearchTap: () => context.go('/search'),
-                          onForYouTap: () {
-                            setState(() {
-                              _selectedFilter = ArticleCategoryFilter.forYou;
-                            });
-                          },
-                          onFiltersTap: _showCategoryFilters,
-                          isForYouSelected: _selectedFilter.isForYou,
-                          hasActiveFilter: !_selectedFilter.isForYou,
-                        ),
-                      ),
-                      if (_isLoadingBlogs)
-                        SliverList.separated(
-                          itemCount: 5,
-                          separatorBuilder: (_, __) => SizedBox(height: 16.h),
-                          itemBuilder: (_, __) => const BlogCardShimmer(),
-                        )
-                      else if (filteredBlogs.isEmpty)
-                        const SliverFillRemaining(
-                          hasScrollBody: false,
-                          child: Center(
-                            child: Text(
-                              'No blogs found',
-                              style: TextStyle(fontSize: 16),
-                            ),
+                      slivers: [
+                        SliverToBoxAdapter(child: SizedBox(height: 40.h)),
+                        SliverToBoxAdapter(
+                          child: HomeHeroSection(
+                            onStartWriting: () => context.push('/create'),
+                            onExploreTopics: () => context.go('/search'),
                           ),
-                        )
-                      else
-                        SliverList.separated(
-                          itemCount: filteredBlogs.length,
-                          separatorBuilder: (_, __) => SizedBox(height: 16.h),
-                          itemBuilder: (context, index) {
-                            return BlogCard(blog: filteredBlogs[index]);
-                          },
                         ),
-                      SliverToBoxAdapter(child: SizedBox(height: 80.h)),
-                    ],
+                        SliverToBoxAdapter(
+                          child: HomeArticlesSection(
+                            onSearchTap: () => context.go('/search'),
+                            onForYouTap: () {
+                              setState(() {
+                                _selectedFilter = ArticleCategoryFilter.forYou;
+                              });
+                            },
+                            onFiltersTap: _showCategoryFilters,
+                            isForYouSelected: _selectedFilter.isForYou,
+                            hasActiveFilter: !_selectedFilter.isForYou,
+                          ),
+                        ),
+                        if (_isLoadingBlogs)
+                          SliverList.separated(
+                            itemCount: 5,
+                            separatorBuilder: (_, __) => SizedBox(height: 16.h),
+                            itemBuilder: (_, __) => const BlogCardShimmer(),
+                          )
+                        else if (filteredBlogs.isEmpty)
+                          const SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: Center(
+                              child: Text(
+                                'No blogs found',
+                                style: TextStyle(fontSize: 16),
+                              ),
+                            ),
+                          )
+                        else
+                          SliverList.separated(
+                            itemCount: filteredBlogs.length,
+                            separatorBuilder: (_, __) => SizedBox(height: 16.h),
+                            itemBuilder: (context, index) {
+                              return BlogCard(blog: filteredBlogs[index]);
+                            },
+                          ),
+                        SliverToBoxAdapter(child: SizedBox(height: 80.h)),
+                      ],
+                    ),
                   ),
                 ),
               ),

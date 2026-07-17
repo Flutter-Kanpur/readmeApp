@@ -11,6 +11,7 @@ import 'package:Readme/features/blog_detail/presentation/widgets/advertisement_b
 import 'package:Readme/features/blog_detail/presentation/widgets/author_follow_card.dart';
 import 'package:Readme/features/blog_detail/presentation/widgets/blog_content_viewer.dart';
 import 'package:Readme/features/blog_detail/presentation/widgets/blog_support_button.dart';
+import 'package:Readme/features/blog_detail/presentation/widgets/blog_view_count.dart';
 import 'package:Readme/features/home_page/domain/entities/blog.dart';
 import 'package:Readme/features/profile_page/presentation/utils/open_author_profile.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -172,12 +173,18 @@ class BlogDetailScreen extends StatelessWidget {
                         ],
                       ),
                       SizedBox(height: 20.h),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: BlogSupportButton(
-                          blogId: blog.id,
-                          initialLikeCount: blog.likeCount,
-                        ),
+                      Row(
+                        children: [
+                          BlogSupportButton(
+                            blogId: blog.id,
+                            initialLikeCount: blog.likeCount,
+                          ),
+                          SizedBox(width: 16.w),
+                          BlogViewCount(
+                            count: blog.viewCount,
+                            compact: false,
+                          ),
+                        ],
                       ),
                       SizedBox(height: 24.h),
                       Divider(

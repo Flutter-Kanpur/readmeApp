@@ -129,40 +129,40 @@ class _AuthorFollowCardState extends State<AuthorFollowCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              GestureDetector(
-                onTap: () => openAuthorProfile(context, widget.author),
-                child: CircleAvatar(
-                  radius: 32.r,
-                  backgroundColor: Colors.grey.shade200,
-                  backgroundImage: imageProviderFromSource(
-                    widget.author.avatarUrl,
+          GestureDetector(
+            onTap: () => openAuthorProfile(context, widget.author),
+            child: Row(
+              children: [
+                CircleAvatar(
+                    radius: 32.r,
+                    backgroundColor: Colors.grey.shade200,
+                    backgroundImage: imageProviderFromSource(
+                      widget.author.avatarUrl,
+                    ),
+                    child: widget.author.avatarUrl == null
+                        ? Text(
+                            widget.author.name.isNotEmpty
+                                ? widget.author.name[0].toUpperCase()
+                                : '?',
+                            style: textStyle_16BoldBlack().copyWith(
+                              fontSize: 22.sp,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          )
+                        : null,
                   ),
-                  child: widget.author.avatarUrl == null
-                      ? Text(
-                          widget.author.name.isNotEmpty
-                              ? widget.author.name[0].toUpperCase()
-                              : '?',
-                          style: textStyle_16BoldBlack().copyWith(
-                            fontSize: 22.sp,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        )
-                      : null,
-                ),
-              ),
-              SizedBox(width: 16.w),
-              Expanded(
-                child: Text(
-                  widget.author.name,
-                  style: textStyle_16BoldBlack().copyWith(
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.w700,
+                SizedBox(width: 16.w),
+                Expanded(
+                  child: Text(
+                    widget.author.name,
+                    style: textStyle_16BoldBlack().copyWith(
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           SizedBox(height: 20.h),
           SizedBox(

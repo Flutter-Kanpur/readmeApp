@@ -1,10 +1,11 @@
+import 'package:Readme/features/blog_detail/data/datasource/blog_view_datasource.dart';
 import 'package:Readme/features/blog_detail/presentation/pages/blog_detail_screen.dart';
 import 'package:Readme/features/home_page/data/datasource/blog_remote_datasource.dart';
 import 'package:Readme/features/home_page/domain/entities/blog.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// Loads full blog content on demand so list screens can omit the heavy body.
+/// Loads full blog content on demand and records a view when opened.
 class BlogDetailLoader extends StatefulWidget {
   const BlogDetailLoader({super.key, required this.blog});
 
@@ -18,6 +19,7 @@ class _BlogDetailLoaderState extends State<BlogDetailLoader> {
   late Blog _blog;
   bool _isLoading = false;
   String? _error;
+  bool _viewRecorded = false;
 
   @override
   void initState() {
@@ -25,6 +27,8 @@ class _BlogDetailLoaderState extends State<BlogDetailLoader> {
     _blog = widget.blog;
     if (_blog.content.trim().isEmpty) {
       _loadFullBlog();
+    } else {
+      _recordView();
     }
   }
 
@@ -51,12 +55,27 @@ class _BlogDetailLoaderState extends State<BlogDetailLoader> {
         _blog = fullBlog;
         _isLoading = false;
       });
+      await _recordView();
     } catch (error) {
       if (!mounted) return;
       setState(() {
         _error = 'Failed to load article: $error';
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _recordView() async {
+    if (_viewRecorded) return;
+    _viewRecorded = true;
+
+    final latest = await BlogViewDatasource(
+      Supabase.instance.client,
+    ).recordView(_blog.id);
+
+    if (!mounted || latest == null) return;
+    if (latest != _blog.viewCount) {
+      setState(() => _blog = _blog.copyWith(viewCount: latest));
     }
   }
 
