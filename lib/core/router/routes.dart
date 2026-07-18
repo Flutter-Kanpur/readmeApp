@@ -16,6 +16,7 @@ import 'package:Readme/features/communities/presentation/pages/communities_scree
 import 'package:Readme/features/communities/presentation/pages/community_dashboard_screen.dart';
 import 'package:Readme/features/communities/presentation/pages/community_detail_screen.dart';
 import 'package:Readme/features/communities/domain/entities/community.dart';
+import 'package:Readme/features/legal/presentation/pages/privacy_policy_screen.dart';
 import 'package:Readme/features/blog_detail/presentation/pages/blog_detail_loader.dart';
 import 'package:Readme/features/home_page/domain/entities/blog.dart';
 import 'package:flutter/material.dart';
@@ -88,6 +89,11 @@ class AppRouter {
         builder: (context, state) => const ResetPasswordScreen(),
       ),
       // Edit Profile route outside ShellRoute to hide bottom nav bar
+      GoRoute(
+        path: '/privacy-policy',
+        name: 'privacy_policy',
+        builder: (context, state) => const PrivacyPolicyScreen(),
+      ),
       GoRoute(
         path: '/edit_profile',
         name: 'edit_profile',

@@ -215,6 +215,20 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               width: double.infinity,
             ),
 
+            SizedBox(height: 16.h),
+            TextButton(
+              onPressed: () => context.push('/privacy-policy'),
+              child: Text(
+                'Privacy Policy',
+                style: textStyle_14RegularBlack().copyWith(
+                  fontSize: 13.sp,
+                  color: Colors.grey.shade700,
+                  fontWeight: FontWeight.w500,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+
             Spacer(flex: 3),
           ],
         ),

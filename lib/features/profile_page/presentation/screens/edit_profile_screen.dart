@@ -377,7 +377,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ),
                     SizedBox(height: 32.h),
                     _buildSaveButton(),
-                    SizedBox(height: 32.h),
+                    SizedBox(height: 24.h),
+                    Center(
+                      child: TextButton(
+                        onPressed: () => context.push('/privacy-policy'),
+                        child: Text(
+                          'Privacy Policy',
+                          style: textStyle_14RegularBlack().copyWith(
+                            fontSize: 14.sp,
+                            color: AppColors.linkBlue,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 8.h),
                     _buildDeleteCard(),
                   ],
                 ),
