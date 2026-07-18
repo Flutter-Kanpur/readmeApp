@@ -457,11 +457,11 @@ class CommunityRemoteDatasource {
 
   // ============================================================
   // Newsletter
-  // Schema assumptions (adjust to match web):
+  // Matches existing Supabase schema (used by web):
   //   community_newsletter_subscribers (id, community_id, email, user_id?,
-  //                                     created_at, unique(community_id,email))
-  //   community_newsletter_issues (id, community_id, title, body,
-  //                                attachment_url?, created_by, created_at)
+  //                                     created_at)
+  //   community_newsletters (id, community_id, title, body, author_id,
+  //                          created_at, file_url?, file_name?, file_size_bytes?)
   //   storage bucket: 'newsletter-attachments'
   // ============================================================
 
@@ -521,15 +521,15 @@ class CommunityRemoteDatasource {
     String communityId,
   ) async {
     final response = await client
-        .from('community_newsletter_issues')
+        .from('community_newsletters')
         .select('''
           id,
           community_id,
           title,
           body,
-          attachment_url,
+          file_url,
           created_at,
-          profiles:created_by (name)
+          profiles:author_id (name)
         ''')
         .eq('community_id', communityId)
         .order('created_at', ascending: false);
@@ -566,24 +566,29 @@ class CommunityRemoteDatasource {
     required String body,
     required String createdBy,
     String? attachmentUrl,
+    String? attachmentFileName,
+    int? attachmentFileSizeBytes,
   }) async {
     final inserted = await client
-        .from('community_newsletter_issues')
+        .from('community_newsletters')
         .insert({
           'community_id': communityId,
           'title': title,
           'body': body,
-          'attachment_url': attachmentUrl,
-          'created_by': createdBy,
+          'file_url': attachmentUrl,
+          if (attachmentFileName != null) 'file_name': attachmentFileName,
+          if (attachmentFileSizeBytes != null)
+            'file_size_bytes': attachmentFileSizeBytes,
+          'author_id': createdBy,
         })
         .select('''
           id,
           community_id,
           title,
           body,
-          attachment_url,
+          file_url,
           created_at,
-          profiles:created_by (name)
+          profiles:author_id (name)
         ''')
         .single();
 

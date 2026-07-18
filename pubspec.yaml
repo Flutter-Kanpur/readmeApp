@@ -60,6 +60,8 @@ dependencies:
   upgrader: ^13.4.0
   package_info_plus: ^9.0.1
   cached_network_image: ^3.4.1
+  pdfrx: ^2.2.24
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:

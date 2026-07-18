@@ -224,7 +224,7 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
       if (code == '42P01' || msg.contains('does not exist')) {
         return 'Newsletter tables not found on Supabase. '
             'Expected `community_newsletter_subscribers` and '
-            '`community_newsletter_issues`.';
+            '`community_newsletters`.';
       }
       if (code == '42501') {
         return 'Row-level security blocked the newsletter read for this user.';
@@ -463,11 +463,15 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
     setState(() => _isPublishingIssue = true);
     try {
       String? attachmentUrl;
+      String? attachmentFileName;
+      int? attachmentFileSizeBytes;
       if (attachment != null) {
         final bytes = attachment.bytes;
         if (bytes == null) {
           throw Exception('Could not read the selected file.');
         }
+        attachmentFileName = attachment.name;
+        attachmentFileSizeBytes = bytes.length;
         attachmentUrl = await _datasource.uploadNewsletterAttachment(
           communityId: _community!.id,
           bytes: bytes,
@@ -482,6 +486,8 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
         body: body,
         createdBy: userId,
         attachmentUrl: attachmentUrl,
+        attachmentFileName: attachmentFileName,
+        attachmentFileSizeBytes: attachmentFileSizeBytes,
       );
 
       _issueTitleController.clear();

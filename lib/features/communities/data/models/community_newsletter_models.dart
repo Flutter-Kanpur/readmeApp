@@ -24,7 +24,8 @@ class CommunityNewsletterIssue {
       communityId: json['community_id'] as String,
       title: json['title'] as String? ?? 'Untitled issue',
       body: json['body'] as String? ?? '',
-      attachmentUrl: json['attachment_url'] as String?,
+      attachmentUrl:
+          json['file_url'] as String? ?? json['attachment_url'] as String?,
       authorName: profile?['name'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
