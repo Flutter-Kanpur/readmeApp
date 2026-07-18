@@ -23,7 +23,7 @@ fun signingProperty(
 }
 
 android {
-    namespace = "com.flutterkanpur.readme"
+    namespace = "com.drishtant.readme"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -57,7 +57,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.flutterkanpur.readme"
+        applicationId = "com.drishtant.readme"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="Readme"
+        android:label="ReadMe"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
@@ -31,7 +31,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
-                    android:scheme="com.flutterkanpur.readme"
+                    android:scheme="com.drishtant.readme"
                     android:host="login-callback" />
             </intent-filter>
         </activity>

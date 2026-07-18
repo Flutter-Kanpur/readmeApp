@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 TextStyle textStyle_16RegularGrey() {
@@ -20,6 +21,17 @@ TextStyle textStyle_24RegularGrey() {
     height: 1.0,
   );
 }
+
+TextStyle textStyle_40RegularGrey() {
+  return TextStyle(
+    fontFamily: 'ProductSans',
+    fontSize: 50.sp,
+    fontWeight: FontWeight.w600,
+    color:  Colors.white,
+    height: 1.0,
+  );
+}
+
 
 TextStyle textStyle_14RegularGrey() {
   return TextStyle(

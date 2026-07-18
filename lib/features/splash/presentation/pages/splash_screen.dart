@@ -92,11 +92,15 @@ class _SplashScreenState extends State<SplashScreen>
               opacity: _logoOpacity,
               child: ScaleTransition(
                 scale: _logoScale,
-                child: SvgPicture.asset(
-                  'assets/icons/logo.svg',
-                  height: 150.h,
-                  width: 150.w,
-                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text("ReadMe",style: textStyle_40RegularGrey(),),
+                    3.verticalSpace,
+                    Text("by Flutter Kanpur",style: textStyle_16RegularGrey().copyWith(color: Colors.white),),
+                  ],
+                )
               ),
             ),
           ),

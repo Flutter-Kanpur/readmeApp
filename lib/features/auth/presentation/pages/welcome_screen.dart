@@ -1,4 +1,5 @@
 import 'package:Readme/features/home_page/presentation/pages/home_screen.dart';
+import 'package:Readme/shared/widgets/primary_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -206,13 +207,11 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             20.verticalSpace,
 
             // Create Account Button - takes full width with internal max width constraint
-            GradientButton(
+            PrimaryButton(
               text: "Create Account",
-              onTap: () {
+              onPressed: () {
                 context.go('/signup');
               },
-              height: 55.h,
-              width: double.infinity,
             ),
 
             SizedBox(height: 16.h),

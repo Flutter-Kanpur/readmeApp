@@ -1,4 +1,4 @@
-package com.flutterkanpur.readme
+package com.drishtant.readme
 
 import io.flutter.embedding.android.FlutterActivity
 

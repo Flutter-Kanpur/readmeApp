@@ -87,7 +87,7 @@ class _MyAppState extends State<MyApp> {
       builder: (context, child) {
         return MaterialApp.router(
           debugShowCheckedModeBanner: false,
-          title: 'Readme',
+          title: 'ReadMe',
           theme: ThemeData(
             textTheme: GoogleFonts.poppinsTextTheme(),
             colorScheme: ColorScheme.fromSeed(seedColor: Colors.white),

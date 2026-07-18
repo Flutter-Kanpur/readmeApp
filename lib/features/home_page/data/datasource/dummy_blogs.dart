@@ -4,12 +4,12 @@ import '../../domain/entities/blog.dart';
 final List<BlogModel> dummyBlogs = [
   BlogModel(
     id: 'dummy-1',
-    title: 'Welcome to Readme',
+    title: 'Welcome to ReadMe',
     content: 'Start exploring amazing blogs curated just for you.',
     coverImage: null,
     category: 'for_you',
     createdAt: DateTime.now(),
     isPublished: true,
-    author: const Author(name: 'Readme Team', avatarUrl: null),
+    author: const Author(name: 'ReadMe Team', avatarUrl: null),
   ),
 ];

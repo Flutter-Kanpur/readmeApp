@@ -2,9 +2,9 @@
 
 **Last updated: July 18, 2026**
 
-This Privacy Policy explains how **Readme** ("we", "us", or "our"), operated by Flutter Kanpur, collects, uses, and shares information when you use our mobile app and website.
+This Privacy Policy explains how **ReadMe** ("we", "us", or "our"), operated by Flutter Kanpur, collects, uses, and shares information when you use our mobile app and website.
 
-By using Readme, you agree to this Privacy Policy.
+By using ReadMe, you agree to this Privacy Policy.
 
 ## 1. Information We Collect
 
@@ -39,7 +39,7 @@ We do **not** sell your personal information.
 ## 2. How We Use Information
 
 We use the information we collect to:
-- Provide, maintain, and improve Readme
+- Provide, maintain, and improve ReadMe
 - Create and manage your account
 - Publish and display your content and profile
 - Enable likes, views, follows, communities, and newsletters
@@ -53,7 +53,7 @@ We use the information we collect to:
 We do not sell your private personal information.
 
 We may share information only:
-- **With service providers** that help us run Readme (for example, **Supabase** for authentication, database, and file storage; **Google** for Sign-In)
+- **With service providers** that help us run ReadMe (for example, **Supabase** for authentication, database, and file storage; **Google** for Sign-In)
 - **Publicly**, when you choose to publish content, profile details, or community information that is meant to be visible to other users
 - **When required by law**, or to protect rights, safety, and security
 - **With your direction**, such as when you share content yourself
@@ -62,7 +62,7 @@ Published articles, public profile fields, community pages, and aggregate like/v
 
 ## 4. Third-Party Services
 
-Readme relies on third-party services, including:
+ReadMe relies on third-party services, including:
 - **Supabase** — authentication, database, and storage
 - **Google** — Google Sign-In
 
@@ -83,7 +83,7 @@ Account deletion permanently removes your authentication account and associated 
 
 ## 7. Children's Privacy
 
-Readme is not directed to children under 13 (or the minimum age required in your country). We do not knowingly collect personal information from children. If you believe a child has provided us personal information, contact us and we will take appropriate steps to remove it.
+ReadMe is not directed to children under 13 (or the minimum age required in your country). We do not knowingly collect personal information from children. If you believe a child has provided us personal information, contact us and we will take appropriate steps to remove it.
 
 ## 8. Your Choices
 
@@ -104,11 +104,11 @@ Your information may be processed and stored on servers operated by our service 
 
 ## 11. Changes to This Policy
 
-We may update this Privacy Policy from time to time. We will revise the "Last updated" date above when we do. Continued use of Readme after changes means you accept the updated policy.
+We may update this Privacy Policy from time to time. We will revise the "Last updated" date above when we do. Continued use of ReadMe after changes means you accept the updated policy.
 
 ## 12. Contact Us
 
 If you have questions about this Privacy Policy or your data, contact us at:
 
 **Email:** hello@flutterkanpur.in  
-**App:** Readme by Flutter Kanpur
+**App:** ReadMe by Flutter Kanpur

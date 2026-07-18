@@ -8,5 +8,5 @@ class AppSecrets {
   /// Custom scheme used for auth callbacks (password reset, OAuth, etc.).
   /// Must be allow-listed in Supabase Auth → URL Configuration → Redirect URLs.
   static const String authCallbackUrl =
-      'com.flutterkanpur.readme://login-callback/';
+      'com.drishtant.readme://login-callback/';
 }

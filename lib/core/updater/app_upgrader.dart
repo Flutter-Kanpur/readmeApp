@@ -32,7 +32,7 @@ class ReadmeUpgraderMessages extends UpgraderMessages {
 
   @override
   String get body =>
-      'A new version of Readme is available. Update now for the latest '
+      'A new version of ReadMe is available. Update now for the latest '
       'features and improvements.';
 
   @override

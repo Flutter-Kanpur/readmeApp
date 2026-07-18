@@ -47,7 +47,7 @@ class HomeHeroSection extends StatelessWidget {
           ),
           SizedBox(height: 20.h),
           Text(
-            'Readme is a reader-first community focused on learning, building, and growing together through articles, collaboration, and real-world design practice.',
+            'ReadMe is a reader-first community focused on learning, building, and growing together through articles, collaboration, and real-world design practice.',
             textAlign: TextAlign.center,
             style: textStyle_16RegularGrey().copyWith(
               fontSize: 12.sp,
