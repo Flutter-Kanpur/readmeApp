@@ -1,3 +1,4 @@
+import 'package:Readme/core/cache/blog_feed_cache.dart';
 import 'package:Readme/core/cache/blog_like_cache.dart';
 import 'package:Readme/features/blog_detail/data/datasource/blog_like_datasource.dart';
 import 'package:Readme/core/utils/app_colors.dart';
@@ -96,6 +97,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (mounted) setState(() {});
   }
 
+  Future<void> _confirmLogout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Log out'),
+        content: const Text('Are you sure you want to log out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Log out'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _logout();
+    }
+  }
+
+  Future<void> _logout() async {
+    try {
+      BlogLikeCache.instance.invalidate();
+      BlogFeedCache.instance.invalidate();
+      await _supabase.auth.signOut();
+      if (!mounted) return;
+      context.go('/welcome');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Unable to log out. Please try again.\n$e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   String get _userName =>
       _profileData?['name'] ??
       _profileData?['full_name'] ??
@@ -161,6 +204,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               style: textStyle_14RegularBlack().copyWith(
                                 fontSize: 14.sp,
                                 color: AppColors.linkBlue,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Center(
+                          child: TextButton(
+                            onPressed: _confirmLogout,
+                            child: Text(
+                              'Log out',
+                              style: textStyle_14RegularBlack().copyWith(
+                                fontSize: 14.sp,
+                                color: AppColors.warning,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),

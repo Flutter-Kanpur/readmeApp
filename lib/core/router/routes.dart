@@ -21,6 +21,7 @@ import 'package:Readme/features/blog_detail/presentation/pages/blog_detail_loade
 import 'package:Readme/features/home_page/domain/entities/blog.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 CustomTransitionPage<void> _fadeSlideTransitionPage({
   required LocalKey key,
@@ -52,8 +53,30 @@ CustomTransitionPage<void> _fadeSlideTransitionPage({
 }
 
 class AppRouter {
+  static final GlobalKey<NavigatorState> rootNavigatorKey =
+      GlobalKey<NavigatorState>(debugLabel: 'root');
+
   static final GoRouter router = GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/',
+    redirect: (context, state) {
+      final loggedIn = Supabase.instance.client.auth.currentUser != null;
+      final location = state.matchedLocation;
+
+      const authLandingRoutes = {
+        '/welcome',
+        '/signin',
+        '/signup',
+      };
+
+      // Keep logged-in users out of auth screens so "back" never lands on
+      // welcome after Google / email login.
+      if (loggedIn && authLandingRoutes.contains(location)) {
+        return '/home';
+      }
+
+      return null;
+    },
     routes: [
       GoRoute(
         path: '/',
@@ -78,6 +101,7 @@ class AppRouter {
       GoRoute(
         path: '/forgot-password',
         name: 'forgot_password',
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) {
           final email = state.extra as String?;
           return ForgotPasswordScreen(initialEmail: email);
@@ -86,22 +110,25 @@ class AppRouter {
       GoRoute(
         path: '/reset-password',
         name: 'reset_password',
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const ResetPasswordScreen(),
       ),
-      // Edit Profile route outside ShellRoute to hide bottom nav bar
       GoRoute(
         path: '/privacy-policy',
         name: 'privacy_policy',
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const PrivacyPolicyScreen(),
       ),
       GoRoute(
         path: '/edit_profile',
         name: 'edit_profile',
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const EditProfileScreen(),
       ),
       GoRoute(
         path: '/profile/:userId',
         name: 'author_profile',
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) {
           final userId = state.pathParameters['userId']!;
           return AuthorProfileScreen(userId: userId);
@@ -110,12 +137,15 @@ class AppRouter {
       GoRoute(
         path: '/create',
         name: 'create',
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const CreateBlogScreen(),
       ),
-      // Blog Detail route outside ShellRoute to hide bottom nav bar
+      // Full-screen on the root navigator so it stacks above the shell and
+      // popping returns to home/search — not to welcome.
       GoRoute(
         path: '/blog/:id',
         name: 'blog_detail',
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) {
           final blog = state.extra as Blog;
           return BlogDetailLoader(blog: blog);
@@ -124,6 +154,7 @@ class AppRouter {
       GoRoute(
         path: '/community/:slug/dashboard',
         name: 'community_dashboard',
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) {
           final slug = state.pathParameters['slug']!;
           final community = state.extra as Community?;
@@ -133,15 +164,13 @@ class AppRouter {
       GoRoute(
         path: '/community/:slug',
         name: 'community_detail',
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) {
           final slug = state.pathParameters['slug']!;
           final community = state.extra as Community?;
           return CommunityDetailScreen(slug: slug, community: community);
         },
       ),
-      // StatefulShellRoute keeps each tab's state alive across switches so
-      // data fetched in initState isn't reloaded every time the user toggles
-      // bottom-nav tabs.
       StatefulShellRoute.indexedStack(
         pageBuilder: (context, state, navigationShell) {
           return _fadeSlideTransitionPage(
@@ -159,9 +188,6 @@ class AppRouter {
               ),
             ],
           ),
-          // Branch order must match the navbar's `_items` order in
-          // `app_bottom_nav_bar.dart` so tapping a nav item routes to the
-          // matching branch.
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -189,8 +215,6 @@ class AppRouter {
               ),
             ],
           ),
-          // Drafts is the 5th branch so the bottom nav stays visible while
-          // the user manages drafts. Index 4 corresponds to the pencil CTA.
           StatefulShellBranch(
             routes: [
               GoRoute(

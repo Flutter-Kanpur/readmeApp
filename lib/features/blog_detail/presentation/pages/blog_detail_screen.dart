@@ -54,7 +54,13 @@ class BlogDetailScreen extends StatelessWidget {
                     color: Colors.transparent,
                     borderRadius: BorderRadius.circular(999),
                     child: InkWell(
-                      onTap: () => context.pop(),
+                      onTap: () {
+                        if (context.canPop()) {
+                          context.pop();
+                        } else {
+                          context.go('/home');
+                        }
+                      },
                       borderRadius: BorderRadius.circular(999),
                       child: Padding(
                         padding: EdgeInsets.symmetric(

@@ -60,6 +60,18 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
     if (error is AuthException) {
       final authMessage = error.message.toLowerCase();
+      if (authMessage.contains('user already registered') ||
+          authMessage.contains('already been registered') ||
+          authMessage.contains('already registered')) {
+        return 'An account with this email already exists. Try logging in.';
+      }
+      if (authMessage.contains('password') &&
+          (authMessage.contains('weak') || authMessage.contains('least'))) {
+        return 'Password is too weak. Use at least 6 characters.';
+      }
+      if (authMessage.contains('invalid') && authMessage.contains('email')) {
+        return 'Please enter a valid email address.';
+      }
       if (authMessage.contains('failed host lookup') ||
           authMessage.contains('socketexception') ||
           authMessage.contains('network is unreachable')) {
@@ -140,6 +152,23 @@ class _SignUpScreenState extends State<SignUpScreen> {
           'full_name': username,
         },
       );
+
+      if (!mounted) return;
+
+      // Supabase may return a user with no identities when the email
+      // is already registered (instead of throwing AuthException).
+      final identities = result.user?.identities;
+      if (result.user != null && (identities == null || identities.isEmpty)) {
+        _showSnackBar(
+          const SnackBar(
+            content: Text(
+              'An account with this email already exists. Try logging in.',
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
 
       if (result.user != null) {
         await _syncProfileAfterSignUp(
@@ -237,7 +266,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
   Widget _buildHeader() {
     return Column(
       children: [
-        SizedBox(height: 280.h),
+        SizedBox(height: 200.h),
+        Image.asset("assets/images/image 5.png", height: 100.h),
+        SizedBox(height: 12.h),
         Text("Create your account", style: textStyle_24BoldBlack()),
         15.verticalSpace,
         Text(

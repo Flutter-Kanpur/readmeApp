@@ -26,20 +26,91 @@ class _LoginWithEmailState extends State<LoginWithEmail> {
   bool loading = false;
   final supabase = Supabase.instance.client;
 
+  void _showSnackBar(SnackBar snackBar) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(snackBar);
+  }
+
+  String _errorMessage(Object error) {
+    if (error is AuthException) {
+      final message = error.message.toLowerCase();
+      if (message.contains('invalid login credentials') ||
+          message.contains('invalid credentials')) {
+        return 'Incorrect email or password. Please try again.';
+      }
+      if (message.contains('email not confirmed')) {
+        return 'Please confirm your email before logging in.';
+      }
+      if (message.contains('failed host lookup') ||
+          message.contains('socketexception') ||
+          message.contains('network is unreachable')) {
+        return 'No internet connection. Check your network and try again.';
+      }
+      return error.message;
+    }
+
+    final message = error.toString().toLowerCase();
+    if (message.contains('failed host lookup') ||
+        message.contains('socketexception') ||
+        message.contains('network is unreachable') ||
+        message.contains('clientexception')) {
+      return 'No internet connection. Check your network and try again.';
+    }
+
+    return 'Unable to log in. Please try again.';
+  }
+
   Future<void> _login() async {
     if (loading) return;
+
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    if (email.isEmpty) {
+      _showSnackBar(
+        const SnackBar(
+          content: Text('Please enter your email address'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    if (password.isEmpty) {
+      _showSnackBar(
+        const SnackBar(
+          content: Text('Please enter your password'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
     setState(() => loading = true);
     try {
       await supabase.auth.signInWithPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
+        email: email,
+        password: password,
       );
 
       if (!mounted) return;
       context.go('/home');
+    } on AuthException catch (e) {
+      _showSnackBar(
+        SnackBar(
+          content: Text(_errorMessage(e)),
+          backgroundColor: Colors.red,
+        ),
+      );
     } catch (e) {
       debugPrint(e.toString());
+      _showSnackBar(
+        SnackBar(
+          content: Text(_errorMessage(e)),
+          backgroundColor: Colors.red,
+        ),
+      );
     } finally {
       if (mounted) setState(() => loading = false);
     }
@@ -92,6 +163,8 @@ class _LoginWithEmailState extends State<LoginWithEmail> {
   Widget _buildHeader() {
     return Column(
       children: [
+        Image.asset("assets/images/image 5.png", height: 100.h),
+        SizedBox(height: 12.h),
         5.horizontalSpace,
         Text("Welcome back", style: textStyle_24BoldBlack()),
         SizedBox(height: 12.h),

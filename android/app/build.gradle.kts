@@ -70,6 +70,11 @@ android {
             if (releaseSigning.storeFile?.exists() == true) {
                 signingConfig = releaseSigning
             }
+            // Required when minify/R8 is enabled (Flutter / AGP 9+).
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 }

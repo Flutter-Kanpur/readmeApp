@@ -1,5 +1,7 @@
-import 'package:Readme/features/home_page/presentation/pages/home_screen.dart';
+import 'dart:io' show Platform;
+
 import 'package:Readme/shared/widgets/primary_button.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -8,9 +10,7 @@ import 'package:Readme/core/utils/assets_path.dart';
 import 'package:Readme/core/utils/text_style.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../shared/widgets/gradient_background.dart';
-import '../../../../shared/widgets/gradient_button.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:google_sign_in/src/token_types.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class WelcomeScreen extends StatefulWidget {
@@ -37,42 +37,48 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         ),
       );
 
-      final GoogleSignIn signIn = GoogleSignIn.instance;
-
-      try {
-        await signIn.initialize(
-          serverClientId: dotenv.env['WEB_CLIENT_ID'],
-          clientId: dotenv.env['ANDROID_CLIENT_ID'],
-        );
-      } catch (e) {
+      final webClientId = dotenv.env['WEB_CLIENT_ID']?.trim();
+      if (webClientId == null || webClientId.isEmpty) {
         if (!mounted) return;
         _showSnackBar(
           context,
-          SnackBar(
-            content: Text('Configuration Error: ${e.toString()}'),
+          const SnackBar(
+            content: Text(
+              'Google Sign-In is not configured (missing WEB_CLIENT_ID).',
+            ),
             backgroundColor: Colors.red,
           ),
         );
         return;
       }
 
-      final GoogleSignInAccount? account = await signIn.authenticate();
+      final GoogleSignIn signIn = GoogleSignIn.instance;
 
-      if (account == null) {
+      try {
+        // Android resolves the native OAuth client from package name + SHA-1.
+        // Pass only the Web client as serverClientId so Supabase gets an ID token.
+        // iOS needs its iOS client ID via clientId when configured.
+        await signIn.initialize(
+          serverClientId: webClientId,
+          clientId: (!kIsWeb && Platform.isIOS)
+              ? dotenv.env['IOS_CLIENT_ID']?.trim()
+              : null,
+        );
+      } catch (e) {
         if (!mounted) return;
         _showSnackBar(
           context,
-          const SnackBar(
-            content: Text('Login cancelled'),
-            backgroundColor: Colors.orange,
-            duration: Duration(seconds: 2),
+          SnackBar(
+            content: Text(_googleErrorMessage(e)),
+            backgroundColor: Colors.red,
           ),
         );
         return;
       }
 
-      final GoogleSignInAuthentication googleAuth =
-          await account.authentication;
+      final GoogleSignInAccount account = await signIn.authenticate();
+
+      final GoogleSignInAuthentication googleAuth = account.authentication;
       final String? idToken = googleAuth.idToken;
 
       if (idToken == null) {
@@ -80,8 +86,12 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         _showSnackBar(
           context,
           const SnackBar(
-            content: Text('Unable to login. Please try again.'),
+            content: Text(
+              'Google did not return an ID token. Check that WEB_CLIENT_ID '
+              'is your OAuth Web client and matches Supabase Google settings.',
+            ),
             backgroundColor: Colors.red,
+            duration: Duration(seconds: 5),
           ),
         );
         return;
@@ -100,11 +110,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             duration: Duration(seconds: 2),
           ),
         );
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-          (context) => false,
-        );
+        if (!mounted) return;
+        // Replace the auth stack so Welcome is not left under Home/Blog.
+        context.go('/home');
       } else {
         if (!mounted) return;
         _showSnackBar(
@@ -116,6 +124,27 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
           ),
         );
       }
+    } on GoogleSignInException catch (e) {
+      if (!mounted) return;
+      if (e.code == GoogleSignInExceptionCode.canceled) {
+        _showSnackBar(
+          context,
+          const SnackBar(
+            content: Text('Google sign-in cancelled'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        return;
+      }
+      _showSnackBar(
+        context,
+        SnackBar(
+          content: Text(_googleErrorMessage(e)),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
+      );
     } on AuthException catch (e) {
       if (!mounted) return;
       _showSnackBar(
@@ -131,14 +160,30 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       _showSnackBar(
         context,
         SnackBar(
-          content: Text('Unexpected Error: $e'),
+          content: Text(_googleErrorMessage(e)),
           backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
+          duration: const Duration(seconds: 5),
         ),
       );
     } finally {
       _setGoogleLoading(false);
     }
+  }
+
+  String _googleErrorMessage(Object error) {
+    final text = error.toString().toLowerCase();
+    if (text.contains('reauth failed') ||
+        text.contains('code: 10') ||
+        text.contains('[10]') ||
+        text.contains('code: 16') ||
+        text.contains('[16]')) {
+      return 'Google Sign-In failed. Add this app\'s SHA-1 in Google Cloud '
+          'for package com.drishtant.readme, then retry.';
+    }
+    if (text.contains('canceled') || text.contains('cancelled')) {
+      return 'Google sign-in cancelled';
+    }
+    return 'Unable to sign in with Google. Please try again.';
   }
 
   void _setGoogleLoading(bool value) {
@@ -162,12 +207,14 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         child: Column(
           children: [
             Spacer(flex: 15),
+            Image.asset("assets/images/image 5.png", height: 100.h),
+            SizedBox(height: 12.h),
             Text("Let's you in", style: textStyle_24BoldBlack()),
             SizedBox(height: 12.h),
             Text(
-              "Be part of a community that learns\nand builds together.",
+              "Be part of a space where community \nlearns and share together.",
               textAlign: TextAlign.center,
-              style: textStyle_16RegularGrey(),
+              style: textStyle_16RegularGrey().copyWith(height: 1.25),
             ),
             Spacer(flex: 1),
 
