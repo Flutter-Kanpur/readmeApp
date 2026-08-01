@@ -14,6 +14,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:Readme/core/network/readme_supabase.dart';
 
 enum _DashboardTab { drafts, newsletter, requests, settings, members }
 
@@ -82,7 +83,7 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
   @override
   void initState() {
     super.initState();
-    _datasource = CommunityRemoteDatasource(Supabase.instance.client);
+    _datasource = CommunityRemoteDatasource(ReadmeSupabase.client);
     _community = widget.community;
     _loadDashboard();
   }
@@ -115,7 +116,7 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
         return;
       }
 
-      final userId = Supabase.instance.client.auth.currentUser?.id;
+      final userId = ReadmeSupabase.client.auth.currentUser?.id;
       if (userId == null) {
         if (!mounted) return;
         setState(() {
@@ -457,7 +458,7 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
       return;
     }
 
-    final userId = Supabase.instance.client.auth.currentUser?.id;
+    final userId = ReadmeSupabase.client.auth.currentUser?.id;
     if (userId == null) return;
 
     setState(() => _isPublishingIssue = true);
@@ -518,7 +519,7 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
 
   Future<void> _submitJoinRequest() async {
     if (_community == null) return;
-    final userId = Supabase.instance.client.auth.currentUser?.id;
+    final userId = ReadmeSupabase.client.auth.currentUser?.id;
     if (userId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please sign in to request to join.')),

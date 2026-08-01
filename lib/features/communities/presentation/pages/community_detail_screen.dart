@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:Readme/core/network/readme_supabase.dart';
 
 class CommunityDetailScreen extends StatefulWidget {
   const CommunityDetailScreen({super.key, required this.slug, this.community});
@@ -41,7 +42,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _datasource = CommunityRemoteDatasource(Supabase.instance.client);
+    _datasource = CommunityRemoteDatasource(ReadmeSupabase.client);
     _community = widget.community;
     _loadDetail();
   }
@@ -69,7 +70,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
       final stats = await _datasource.fetchCommunityStats(community.id);
       final articles = await _datasource.fetchCommunityArticles(community.id);
 
-      final user = Supabase.instance.client.auth.currentUser;
+      final user = ReadmeSupabase.client.auth.currentUser;
       final userId = user?.id;
       var isMember = false;
       String? userRole;
@@ -316,7 +317,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
   }
 
   Future<void> _toggleFollow() async {
-    final user = Supabase.instance.client.auth.currentUser;
+    final user = ReadmeSupabase.client.auth.currentUser;
     if (user == null) {
       context.push('/signin');
       return;

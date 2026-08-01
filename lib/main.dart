@@ -8,6 +8,7 @@ import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:Readme/core/network/readme_supabase.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -72,7 +73,7 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+    ReadmeSupabase.client.auth.onAuthStateChange.listen((data) {
       if (data.event == AuthChangeEvent.passwordRecovery) {
         AppRouter.router.go('/reset-password');
       }

@@ -12,6 +12,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../shared/widgets/gradient_background.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:Readme/core/network/readme_supabase.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -97,7 +98,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         return;
       }
 
-      final AuthResponse result = await Supabase.instance.client.auth
+      final AuthResponse result = await ReadmeSupabase.client.auth
           .signInWithIdToken(provider: OAuthProvider.google, idToken: idToken);
 
       if (result.user != null && result.session != null) {
@@ -207,7 +208,11 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         child: Column(
           children: [
             Spacer(flex: 15),
-            Image.asset("assets/images/image 5.png", height: 100.h),
+            Image.asset(
+              AssetsPath.brandImage,
+              package: AssetsPath.package,
+              height: 100.h,
+            ),
             SizedBox(height: 12.h),
             Text("Let's you in", style: textStyle_24BoldBlack()),
             SizedBox(height: 12.h),
@@ -309,7 +314,12 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               ),
               SizedBox(width: 12.w),
             ] else ...[
-              SvgPicture.asset(svgPath, height: 20.h, width: 20.w),
+              SvgPicture.asset(
+                svgPath,
+                package: AssetsPath.package,
+                height: 20.h,
+                width: 20.w,
+              ),
               SizedBox(width: 12.w),
             ],
             Text(

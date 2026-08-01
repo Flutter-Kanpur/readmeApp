@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:Readme/core/network/readme_supabase.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -28,7 +29,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   bool _isLoadingProfile = true;
   bool _isDeleting = false;
 
-  final supabase = Supabase.instance.client;
+  final supabase = ReadmeSupabase.client;
   User? _user;
   Map<String, dynamic>? _profileData;
   String _username = '';

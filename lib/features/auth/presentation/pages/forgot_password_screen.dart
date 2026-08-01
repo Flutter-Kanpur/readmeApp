@@ -10,6 +10,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../shared/widgets/gradient_background.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../../shared/widgets/textfield.dart';
+import 'package:Readme/core/network/readme_supabase.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key, this.initialEmail});
@@ -24,7 +25,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   late final TextEditingController _emailController;
   bool _loading = false;
   bool _emailSent = false;
-  final _supabase = Supabase.instance.client;
+  final _supabase = ReadmeSupabase.client;
 
   @override
   void initState() {

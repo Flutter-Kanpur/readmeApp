@@ -6,6 +6,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:Readme/core/network/readme_supabase.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -71,7 +72,7 @@ class _SplashScreenState extends State<SplashScreen>
     await _exitController.forward();
     if (!mounted) return;
 
-    final user = Supabase.instance.client.auth.currentUser;
+    final user = ReadmeSupabase.client.auth.currentUser;
 
     if (user != null) {
       context.go('/home');

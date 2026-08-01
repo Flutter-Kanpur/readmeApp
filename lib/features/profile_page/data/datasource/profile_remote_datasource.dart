@@ -15,7 +15,7 @@ class ProfileRemoteDatasource {
   Future<Map<String, dynamic>?> fetchProfileById(String userId) async {
     final response = await client
         .from('profiles')
-        .select('id, name, username, headline, bio, avatar_url')
+        .select('id, name, username, headline, bio, avatar_url, created_at')
         .eq('id', userId)
         .maybeSingle();
 

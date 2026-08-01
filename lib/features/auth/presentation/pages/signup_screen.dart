@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:Readme/core/network/supabase_connectivity.dart';
 import 'package:Readme/core/utils/app_colors.dart';
+import 'package:Readme/core/utils/assets_path.dart';
 import 'package:Readme/core/utils/text_style.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../shared/widgets/gradient_background.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../../shared/widgets/textfield.dart';
+import 'package:Readme/core/network/readme_supabase.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -22,7 +24,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   late TextEditingController _passwordController;
   late TextEditingController _confirmPasswordController;
   bool loading = false;
-  final supabase = Supabase.instance.client;
+  final supabase = ReadmeSupabase.client;
 
   void _showSnackBar(SnackBar snackBar) {
     if (!mounted) return;
@@ -267,7 +269,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return Column(
       children: [
         SizedBox(height: 200.h),
-        Image.asset("assets/images/image 5.png", height: 100.h),
+        Image.asset(
+          AssetsPath.brandImage,
+          package: AssetsPath.package,
+          height: 100.h,
+        ),
         SizedBox(height: 12.h),
         Text("Create your account", style: textStyle_24BoldBlack()),
         15.verticalSpace,

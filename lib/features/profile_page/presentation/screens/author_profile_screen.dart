@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:Readme/core/network/readme_supabase.dart';
 
 class AuthorProfileScreen extends StatefulWidget {
   const AuthorProfileScreen({super.key, required this.userId});
@@ -22,7 +23,7 @@ class AuthorProfileScreen extends StatefulWidget {
 }
 
 class _AuthorProfileScreenState extends State<AuthorProfileScreen> {
-  final _supabase = Supabase.instance.client;
+  final _supabase = ReadmeSupabase.client;
   late final _blogRepository = BlogRepositoryImpl(
     BlogRemoteDatasource(_supabase),
   );

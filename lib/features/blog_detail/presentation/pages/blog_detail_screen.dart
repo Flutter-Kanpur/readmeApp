@@ -15,6 +15,7 @@ import 'package:Readme/features/blog_detail/presentation/widgets/blog_view_count
 import 'package:Readme/features/home_page/domain/entities/blog.dart';
 import 'package:Readme/features/profile_page/presentation/utils/open_author_profile.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:Readme/core/network/readme_supabase.dart';
 
 class BlogDetailScreen extends StatelessWidget {
   final Blog blog;
@@ -22,7 +23,7 @@ class BlogDetailScreen extends StatelessWidget {
   const BlogDetailScreen({super.key, required this.blog});
 
   String _storagePublicUrl(String path) {
-    return Supabase.instance.client.storage
+    return ReadmeSupabase.client.storage
         .from('blog_images')
         .getPublicUrl(path);
   }

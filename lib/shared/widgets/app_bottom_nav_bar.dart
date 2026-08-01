@@ -147,6 +147,7 @@ class _DraftCtaButton extends StatelessWidget {
         children: [
           SvgPicture.asset(
             AssetsPath.draftIcon,
+            package: AssetsPath.package,
             width: 22.sp,
             height: 22.sp,
             colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
@@ -202,6 +203,7 @@ class _NavItem extends StatelessWidget {
       labelColor: color,
       icon: SvgPicture.asset(
         data.assetPath,
+        package: AssetsPath.package,
         width: 25.sp,
         height: 25.sp,
         colorFilter: ColorFilter.mode(color, BlendMode.srcIn),

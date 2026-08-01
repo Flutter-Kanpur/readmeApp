@@ -14,6 +14,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../shared/widgets/category_filter_bottom_sheet.dart';
 import '../../../../shared/widgets/gradient_background.dart';
+import 'package:Readme/core/network/readme_supabase.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -32,7 +33,7 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   void initState() {
     super.initState();
-    _datasource = BlogRemoteDatasource(Supabase.instance.client);
+    _datasource = BlogRemoteDatasource(ReadmeSupabase.client);
     _loadArticles();
   }
 
@@ -96,13 +97,13 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Future<void> _preloadLikeState(List<ExploreArticle> articles) async {
-    final user = Supabase.instance.client.auth.currentUser;
+    final user = ReadmeSupabase.client.auth.currentUser;
     if (user == null || articles.isEmpty || !mounted) return;
 
     await BlogLikeCache.instance.preload(
       userId: user.id,
       blogIds: articles.map((article) => article.blog.id).toList(),
-      datasource: BlogLikeDatasource(Supabase.instance.client),
+      datasource: BlogLikeDatasource(ReadmeSupabase.client),
     );
 
     if (mounted) setState(() {});

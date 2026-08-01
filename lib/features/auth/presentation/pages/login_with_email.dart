@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:Readme/core/utils/assets_path.dart';
 import 'package:Readme/core/utils/text_style.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../shared/widgets/gradient_background.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../../shared/widgets/textfield.dart';
+import 'package:Readme/core/network/readme_supabase.dart';
 
 class LoginWithEmail extends StatefulWidget {
   const LoginWithEmail({super.key});
@@ -24,7 +26,7 @@ class _LoginWithEmailState extends State<LoginWithEmail> {
   final _passwordFieldKey = GlobalKey();
 
   bool loading = false;
-  final supabase = Supabase.instance.client;
+  final supabase = ReadmeSupabase.client;
 
   void _showSnackBar(SnackBar snackBar) {
     if (!mounted) return;
@@ -163,7 +165,11 @@ class _LoginWithEmailState extends State<LoginWithEmail> {
   Widget _buildHeader() {
     return Column(
       children: [
-        Image.asset("assets/images/image 5.png", height: 100.h),
+        Image.asset(
+          AssetsPath.brandImage,
+          package: AssetsPath.package,
+          height: 100.h,
+        ),
         SizedBox(height: 12.h),
         5.horizontalSpace,
         Text("Welcome back", style: textStyle_24BoldBlack()),

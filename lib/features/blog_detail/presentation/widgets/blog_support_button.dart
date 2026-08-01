@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:Readme/core/network/readme_supabase.dart';
 
 /// Heart-style support control for articles.
 ///
@@ -43,7 +44,7 @@ class _BlogSupportButtonState extends State<BlogSupportButton>
   @override
   void initState() {
     super.initState();
-    _datasource = BlogLikeDatasource(Supabase.instance.client);
+    _datasource = BlogLikeDatasource(ReadmeSupabase.client);
     _likeCount = widget.initialLikeCount;
     _isLiked = widget.initialIsLiked ?? false;
     _isLoading = widget.compact && widget.initialIsLiked != null
@@ -101,7 +102,7 @@ class _BlogSupportButtonState extends State<BlogSupportButton>
         return;
       }
 
-      final user = Supabase.instance.client.auth.currentUser;
+      final user = ReadmeSupabase.client.auth.currentUser;
       if (user == null) {
         if (mounted) setState(() => _isLoading = false);
         return;
@@ -126,7 +127,7 @@ class _BlogSupportButtonState extends State<BlogSupportButton>
 
     try {
       final count = await _datasource.fetchLikeCount(widget.blogId);
-      final user = Supabase.instance.client.auth.currentUser;
+      final user = ReadmeSupabase.client.auth.currentUser;
       var liked = false;
       if (user != null) {
         liked = await _datasource.isLikedByUser(
@@ -148,7 +149,7 @@ class _BlogSupportButtonState extends State<BlogSupportButton>
   Future<void> _toggleSupport() async {
     if (_actionLoading) return;
 
-    final user = Supabase.instance.client.auth.currentUser;
+    final user = ReadmeSupabase.client.auth.currentUser;
     if (user == null) {
       context.push('/signin');
       return;

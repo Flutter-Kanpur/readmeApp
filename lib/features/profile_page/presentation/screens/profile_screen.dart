@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:Readme/core/cache/blog_feed_cache.dart';
 import 'package:Readme/core/cache/blog_like_cache.dart';
 import 'package:Readme/features/blog_detail/data/datasource/blog_like_datasource.dart';
@@ -17,6 +19,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../shared/widgets/gradient_background.dart';
+import 'package:Readme/core/network/readme_supabase.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -26,7 +29,7 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final _supabase = Supabase.instance.client;
+  final _supabase = ReadmeSupabase.client;
   late final _blogRepository = BlogRepositoryImpl(
     BlogRemoteDatasource(_supabase),
   );
@@ -42,13 +45,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
   );
   bool _isLoading = true;
   String? _appVersionLabel;
+  StreamSubscription<AuthState>? _authSub;
 
   @override
   void initState() {
     super.initState();
-    _user = _supabase.auth.currentUser;
     _loadAppVersion();
     _loadProfile();
+    // Host apps mint the ReadMe session asynchronously after this screen mounts.
+    _authSub = _supabase.auth.onAuthStateChange.listen((data) {
+      final event = data.event;
+      if (event == AuthChangeEvent.signedIn ||
+          event == AuthChangeEvent.tokenRefreshed ||
+          event == AuthChangeEvent.userUpdated) {
+        _loadProfile();
+      } else if (event == AuthChangeEvent.signedOut) {
+        if (!mounted) return;
+        setState(() {
+          _user = null;
+          _profileData = null;
+          _publishedBlogs = [];
+          _followStats = const UserFollowStats(followers: 0, following: 0);
+          _isLoading = false;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _authSub?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadAppVersion() async {
@@ -60,15 +87,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadProfile() async {
-    if (_user == null) {
-      if (mounted) setState(() => _isLoading = false);
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      if (mounted) {
+        setState(() {
+          _user = null;
+          _profileData = null;
+          _publishedBlogs = [];
+          _followStats = const UserFollowStats(followers: 0, following: 0);
+          _isLoading = false;
+        });
+      }
       return;
     }
 
+    if (mounted) {
+      setState(() {
+        _user = user;
+        _isLoading = true;
+      });
+    }
+
     try {
-      final profileData = await _profileDatasource.fetchProfileById(_user!.id);
-      final publishedBlogs = await _blogRepository.getBlogsByAuthor(_user!.id);
-      final followStats = await _profileDatasource.fetchFollowStats(_user!.id);
+      final profileData = await _profileDatasource.fetchProfileById(user.id);
+      final publishedBlogs = await _blogRepository.getBlogsByAuthor(user.id);
+      final followStats = await _profileDatasource.fetchFollowStats(user.id);
 
       if (!mounted) return;
       setState(() {
@@ -139,14 +182,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  String get _userName =>
-      _profileData?['name'] ??
-      _profileData?['full_name'] ??
-      _profileData?['username'] ??
-      _user?.userMetadata?['full_name'] ??
-      _user?.userMetadata?['name'] ??
-      _user?.userMetadata?['username'] ??
-      'User';
+  String get _userName {
+    final candidates = <dynamic>[
+      _profileData?['name'],
+      _profileData?['full_name'],
+      _profileData?['username'],
+      _user?.userMetadata?['full_name'],
+      _user?.userMetadata?['name'],
+      _user?.userMetadata?['username'],
+      _user?.email,
+    ];
+    for (final value in candidates) {
+      if (value is String && value.trim().isNotEmpty && value.trim() != 'null') {
+        return value.trim();
+      }
+    }
+    return 'User';
+  }
 
   String get _subtitle {
     final headline = _profileData?['headline'] as String?;

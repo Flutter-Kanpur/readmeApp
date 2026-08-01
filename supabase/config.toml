@@ -1,0 +1,4 @@
+[functions.sync-session]
+# Kanpur access tokens are verified inside the function via JWKS (ES256) or
+# optional KANPUR_JWT_SECRET (HS256). Disable gateway JWT checks.
+verify_jwt = false

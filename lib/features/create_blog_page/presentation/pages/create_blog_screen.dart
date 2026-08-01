@@ -18,6 +18,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:Readme/core/network/readme_supabase.dart';
 
 class CreateBlogScreen extends StatefulWidget {
   const CreateBlogScreen({super.key});
@@ -35,7 +36,7 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
   final ScrollController _scrollController = ScrollController();
   final TextEditingController titleController = TextEditingController();
 
-  final supabase = Supabase.instance.client;
+  final supabase = ReadmeSupabase.client;
   final ImagePicker _imagePicker = ImagePicker();
   XFile? _coverImageFile;
 

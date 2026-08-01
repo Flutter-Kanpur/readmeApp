@@ -6,6 +6,7 @@ import 'package:Readme/features/communities/domain/entities/community.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:Readme/core/network/readme_supabase.dart';
 
 class CommunityNewsletterSubscribeCard extends StatefulWidget {
   const CommunityNewsletterSubscribeCard({
@@ -34,7 +35,7 @@ class _CommunityNewsletterSubscribeCardState
   @override
   void initState() {
     super.initState();
-    final user = Supabase.instance.client.auth.currentUser;
+    final user = ReadmeSupabase.client.auth.currentUser;
     _emailController = TextEditingController(text: user?.email ?? '');
   }
 
@@ -58,7 +59,7 @@ class _CommunityNewsletterSubscribeCardState
       await widget.datasource.subscribeToNewsletter(
         communityId: widget.community.id,
         email: email,
-        userId: Supabase.instance.client.auth.currentUser?.id,
+        userId: ReadmeSupabase.client.auth.currentUser?.id,
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

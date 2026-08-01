@@ -22,6 +22,7 @@ import 'package:Readme/features/home_page/domain/entities/blog.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:Readme/core/network/readme_supabase.dart';
 
 CustomTransitionPage<void> _fadeSlideTransitionPage({
   required LocalKey key,
@@ -60,7 +61,7 @@ class AppRouter {
     navigatorKey: rootNavigatorKey,
     initialLocation: '/',
     redirect: (context, state) {
-      final loggedIn = Supabase.instance.client.auth.currentUser != null;
+      final loggedIn = ReadmeSupabase.client.auth.currentUser != null;
       final location = state.matchedLocation;
 
       const authLandingRoutes = {

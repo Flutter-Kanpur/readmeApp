@@ -4,6 +4,7 @@ import 'package:Readme/features/home_page/data/datasource/blog_remote_datasource
 import 'package:Readme/features/home_page/domain/entities/blog.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:Readme/core/network/readme_supabase.dart';
 
 /// Loads full blog content on demand and records a view when opened.
 class BlogDetailLoader extends StatefulWidget {
@@ -39,7 +40,7 @@ class _BlogDetailLoaderState extends State<BlogDetailLoader> {
     });
 
     try {
-      final datasource = BlogRemoteDatasource(Supabase.instance.client);
+      final datasource = BlogRemoteDatasource(ReadmeSupabase.client);
       final fullBlog = await datasource.fetchBlogById(_blog.id);
       if (!mounted) return;
 
@@ -70,7 +71,7 @@ class _BlogDetailLoaderState extends State<BlogDetailLoader> {
     _viewRecorded = true;
 
     final latest = await BlogViewDatasource(
-      Supabase.instance.client,
+      ReadmeSupabase.client,
     ).recordView(_blog.id);
 
     if (!mounted || latest == null) return;

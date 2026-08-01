@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:Readme/core/network/readme_supabase.dart';
 
 class AuthorFollowCard extends StatefulWidget {
   const AuthorFollowCard({super.key, required this.author});
@@ -29,7 +30,7 @@ class _AuthorFollowCardState extends State<AuthorFollowCard> {
   @override
   void initState() {
     super.initState();
-    _datasource = ProfileRemoteDatasource(Supabase.instance.client);
+    _datasource = ProfileRemoteDatasource(ReadmeSupabase.client);
     _loadFollowState();
   }
 
@@ -40,7 +41,7 @@ class _AuthorFollowCardState extends State<AuthorFollowCard> {
       return;
     }
 
-    final user = Supabase.instance.client.auth.currentUser;
+    final user = ReadmeSupabase.client.auth.currentUser;
     if (user == null) {
       if (mounted) {
         setState(() {
@@ -80,7 +81,7 @@ class _AuthorFollowCardState extends State<AuthorFollowCard> {
     final authorId = widget.author.id;
     if (authorId == null || _actionLoading) return;
 
-    final user = Supabase.instance.client.auth.currentUser;
+    final user = ReadmeSupabase.client.auth.currentUser;
     if (user == null) {
       context.push('/signin');
       return;

@@ -19,6 +19,7 @@ import 'package:Readme/features/home_page/presentation/widgets/home_hero_section
 
 import '../../../../shared/widgets/category_filter_bottom_sheet.dart';
 import '../../../../shared/widgets/gradient_background.dart';
+import 'package:Readme/core/network/readme_supabase.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -43,7 +44,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
 
     blogRepository = BlogRepositoryImpl(
-      BlogRemoteDatasource(Supabase.instance.client),
+      BlogRemoteDatasource(ReadmeSupabase.client),
     );
 
     _scrollController.addListener(_onScroll);
@@ -106,13 +107,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _preloadLikeState(List<Blog> blogs) async {
-    final user = Supabase.instance.client.auth.currentUser;
+    final user = ReadmeSupabase.client.auth.currentUser;
     if (user == null || blogs.isEmpty || !mounted) return;
 
     await BlogLikeCache.instance.preload(
       userId: user.id,
       blogIds: blogs.map((blog) => blog.id).toList(),
-      datasource: BlogLikeDatasource(Supabase.instance.client),
+      datasource: BlogLikeDatasource(ReadmeSupabase.client),
     );
 
     if (mounted) setState(() {});

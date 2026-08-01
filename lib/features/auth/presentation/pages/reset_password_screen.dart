@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../shared/widgets/gradient_background.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../../shared/widgets/textfield.dart';
+import 'package:Readme/core/network/readme_supabase.dart';
 
 /// Shown when the user opens a recovery link and lands in a recovery session.
 class ResetPasswordScreen extends StatefulWidget {
@@ -21,7 +22,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   late final TextEditingController _passwordController;
   late final TextEditingController _confirmPasswordController;
   bool _loading = false;
-  final _supabase = Supabase.instance.client;
+  final _supabase = ReadmeSupabase.client;
 
   @override
   void initState() {

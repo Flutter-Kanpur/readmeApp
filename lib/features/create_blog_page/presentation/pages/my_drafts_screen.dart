@@ -1,4 +1,5 @@
 import 'package:Readme/core/utils/app_colors.dart';
+import 'package:Readme/core/utils/assets_path.dart';
 import 'package:Readme/core/utils/draft_storage.dart';
 import 'package:Readme/core/utils/quill_content_parser.dart';
 import 'package:Readme/core/utils/text_style.dart';
@@ -211,7 +212,8 @@ class _EmptyState extends StatelessWidget {
             width: 180.w,
             height: 180.w,
             child: Lottie.asset(
-              'assets/lottie/empty.json',
+              AssetsPath.emptyLottie,
+              package: AssetsPath.package,
               fit: BoxFit.contain,
               repeat: true,
             ),

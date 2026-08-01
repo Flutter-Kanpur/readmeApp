@@ -11,6 +11,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:Readme/core/network/readme_supabase.dart';
 
 class BlogContentViewer extends StatefulWidget {
   const BlogContentViewer({
@@ -69,7 +70,7 @@ class _BlogContentViewerState extends State<BlogContentViewer> {
   }
 
   String _storagePublicUrl(String path) {
-    return Supabase.instance.client.storage
+    return ReadmeSupabase.client.storage
         .from('blog_images')
         .getPublicUrl(path);
   }
@@ -401,7 +402,7 @@ class _BlogImageEmbedBuilder extends quill.EmbedBuilder {
     final resolved = resolveInlineImageSource(
       rawSource,
       imageUrls: imageUrls,
-      storagePathToUrl: (path) => Supabase.instance.client.storage
+      storagePathToUrl: (path) => ReadmeSupabase.client.storage
           .from('blog_images')
           .getPublicUrl(path),
     );
