@@ -12,6 +12,7 @@ class CommunityRemoteDatasource {
 
   final SupabaseClient client;
   static const _defaultPageSize = 30;
+  static const _articlePageSize = 20;
 
   Future<List<CommunityModel>> fetchCommunities() async {
     final response = await client
@@ -114,16 +115,18 @@ class CommunityRemoteDatasource {
   Future<List<CommunityArticle>> fetchCommunityArticles(
     String communityId,
   ) async {
-    const selectBase = '''
+    var select = '''
       blog_id,
       author_id,
       title,
       content,
       cover_image,
       created_at,
+      published_at,
       category,
       is_published,
       view_count,
+      like_count,
       profiles!inner (
         id,
         name,
@@ -137,55 +140,41 @@ class CommunityRemoteDatasource {
         )
       )
     ''';
-    const selectWithLikes =
-        '''
-      $selectBase,
-      blog_likes (count)
-    ''';
+    var orderColumn = 'published_at';
 
-    Future<List<CommunityArticle>> run(String select) async {
+    Future<List<CommunityArticle>> run() async {
       final response = await client
           .from('blogs')
           .select(select)
           .eq('community_id', communityId)
           .eq('is_published', true)
-          .order('created_at', ascending: false)
-          .limit(_defaultPageSize);
+          .order(orderColumn, ascending: false, nullsFirst: false)
+          .limit(_articlePageSize);
       return response
           .map<CommunityArticle>((row) => CommunityArticle.fromJson(row))
           .toList();
     }
 
     try {
-      return await run(selectWithLikes);
+      return await run();
     } catch (e) {
       final message = e.toString().toLowerCase();
-      final likesMissing =
-          message.contains('blog_likes') ||
-          message.contains('could not find') ||
-          message.contains('relationship') ||
-          message.contains('pgrst200');
-      final viewCountMissing = message.contains('view_count');
-      if (viewCountMissing) {
-        final withoutViewCount = selectWithLikes.replaceAll(
-          RegExp(r',\s*view_count'),
-          '',
-        );
-        try {
-          return await run(withoutViewCount);
-        } catch (inner) {
-          final innerMessage = inner.toString().toLowerCase();
-          final likesStillMissing =
-              innerMessage.contains('blog_likes') ||
-              innerMessage.contains('could not find') ||
-              innerMessage.contains('relationship') ||
-              innerMessage.contains('pgrst200');
-          if (!likesStillMissing) rethrow;
-          return run(selectBase.replaceAll(RegExp(r',\s*view_count'), ''));
-        }
+      var retried = false;
+      if (message.contains('published_at')) {
+        select = select.replaceAll(RegExp(r',\s*published_at'), '');
+        orderColumn = 'created_at';
+        retried = true;
       }
-      if (!likesMissing) rethrow;
-      return run(selectBase);
+      if (message.contains('like_count')) {
+        select = select.replaceAll(RegExp(r',\s*like_count'), '');
+        retried = true;
+      }
+      if (message.contains('view_count')) {
+        select = select.replaceAll(RegExp(r',\s*view_count'), '');
+        retried = true;
+      }
+      if (!retried) rethrow;
+      return run();
     }
   }
 

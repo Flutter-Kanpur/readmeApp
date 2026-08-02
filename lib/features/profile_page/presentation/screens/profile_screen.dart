@@ -1,7 +1,9 @@
 import 'dart:async';
 
+import 'package:Readme/core/cache/blog_engagement_store.dart';
 import 'package:Readme/core/cache/blog_feed_cache.dart';
 import 'package:Readme/core/cache/blog_like_cache.dart';
+import 'package:Readme/core/config/readme_host.dart';
 import 'package:Readme/features/blog_detail/data/datasource/blog_like_datasource.dart';
 import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/app_image.dart';
@@ -114,6 +116,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final followStats = await _profileDatasource.fetchFollowStats(user.id);
 
       if (!mounted) return;
+      BlogEngagementStore.instance.seedAll(publishedBlogs);
       setState(() {
         _profileData = profileData;
         _publishedBlogs = publishedBlogs;
@@ -168,6 +171,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       BlogLikeCache.instance.invalidate();
       BlogFeedCache.instance.invalidate();
+      BlogEngagementStore.instance.invalidate();
       await _supabase.auth.signOut();
       if (!mounted) return;
       context.go('/welcome');
@@ -261,19 +265,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                         ),
-                        Center(
-                          child: TextButton(
-                            onPressed: _confirmLogout,
-                            child: Text(
-                              'Log out',
-                              style: textStyle_14RegularBlack().copyWith(
-                                fontSize: 14.sp,
-                                color: AppColors.warning,
-                                fontWeight: FontWeight.w600,
+                        if (ReadmeHost.showAccountLifecycleActions)
+                          Center(
+                            child: TextButton(
+                              onPressed: _confirmLogout,
+                              child: Text(
+                                'Log out',
+                                style: textStyle_14RegularBlack().copyWith(
+                                  fontSize: 14.sp,
+                                  color: AppColors.warning,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
                           ),
-                        ),
                         SizedBox(height: 8.h),
                         _buildVersionFooter(),
                       ],

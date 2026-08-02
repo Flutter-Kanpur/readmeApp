@@ -1,10 +1,10 @@
+import 'package:Readme/core/cache/blog_engagement_store.dart';
+import 'package:Readme/core/network/readme_supabase.dart';
 import 'package:Readme/features/blog_detail/data/datasource/blog_view_datasource.dart';
 import 'package:Readme/features/blog_detail/presentation/pages/blog_detail_screen.dart';
 import 'package:Readme/features/home_page/data/datasource/blog_remote_datasource.dart';
 import 'package:Readme/features/home_page/domain/entities/blog.dart';
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:Readme/core/network/readme_supabase.dart';
 
 /// Loads full blog content on demand and records a view when opened.
 class BlogDetailLoader extends StatefulWidget {
@@ -26,6 +26,7 @@ class _BlogDetailLoaderState extends State<BlogDetailLoader> {
   void initState() {
     super.initState();
     _blog = widget.blog;
+    BlogEngagementStore.instance.seedEngagementFromBlog(_blog);
     if (_blog.content.trim().isEmpty) {
       _loadFullBlog();
     } else {
@@ -52,6 +53,7 @@ class _BlogDetailLoaderState extends State<BlogDetailLoader> {
         return;
       }
 
+      BlogEngagementStore.instance.seedEngagementFromBlog(fullBlog);
       setState(() {
         _blog = fullBlog;
         _isLoading = false;
@@ -75,6 +77,8 @@ class _BlogDetailLoaderState extends State<BlogDetailLoader> {
     ).recordView(_blog.id);
 
     if (!mounted || latest == null) return;
+
+    BlogEngagementStore.instance.applyViewCount(_blog.id, latest);
     if (latest != _blog.viewCount) {
       setState(() => _blog = _blog.copyWith(viewCount: latest));
     }

@@ -1,3 +1,4 @@
+import 'package:Readme/core/config/readme_host.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Backend client for ReadMe blog features.
@@ -12,8 +13,11 @@ class ReadmeSupabase {
 
   static SupabaseClient get client => _override ?? Supabase.instance.client;
 
+  /// Bind a host-provided Supabase client and mark ReadMe as embedded
+  /// (hides standalone-only account actions like logout / delete).
   static void bind(SupabaseClient client) {
     _override = client;
+    ReadmeHost.markEmbedded();
   }
 
   static void clear() {

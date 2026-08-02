@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/services.dart';
 
+import 'package:Readme/core/cache/blog_feed_cache.dart';
 import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/app_image.dart';
 import 'package:Readme/core/utils/draft_storage.dart';
@@ -256,6 +257,7 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
       final result = await _extractImagesWithPlaceholders(rawDelta);
       coverImageUrl ??= result['cover_image'] as String?;
 
+      final publishedAt = DateTime.now().toUtc().toIso8601String();
       await supabase.from('blogs').insert({
         'title': title,
         'content': jsonEncode(result['content']),
@@ -264,7 +266,9 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
         'tags': _tags.isEmpty ? null : _tags,
         'author_id': supabase.auth.currentUser!.id,
         'is_published': true,
+        'published_at': publishedAt,
       });
+      BlogFeedCache.instance.invalidate();
       await _clearDraft();
       if (!mounted) return;
 

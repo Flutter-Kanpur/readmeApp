@@ -1,3 +1,4 @@
+import 'package:Readme/core/cache/blog_engagement_store.dart';
 import 'package:Readme/core/cache/blog_feed_cache.dart';
 import 'package:Readme/core/cache/blog_like_cache.dart';
 import 'package:Readme/core/utils/text_style.dart';
@@ -81,12 +82,14 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted) return;
 
     if (!forceRefresh && BlogFeedCache.instance.isFresh) {
+      final cached = BlogFeedCache.instance.blogs!;
+      BlogEngagementStore.instance.seedAll(cached);
       setState(() {
-        allBlogs = BlogFeedCache.instance.blogs!;
+        allBlogs = cached;
         _selectedFilter = ArticleCategoryFilter.forYou;
         _isLoadingBlogs = false;
       });
-      await _preloadLikeState(allBlogs);
+      await _preloadLikeState(cached);
       return;
     }
 
@@ -95,6 +98,7 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final blogs = await BlogFeedCache.instance.load(blogRepository.getBlogs);
       if (!mounted) return;
+      BlogEngagementStore.instance.seedAll(blogs);
       setState(() {
         allBlogs = blogs;
         _selectedFilter = ArticleCategoryFilter.forYou;

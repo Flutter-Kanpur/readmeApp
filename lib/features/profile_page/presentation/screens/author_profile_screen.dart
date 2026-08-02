@@ -1,3 +1,4 @@
+import 'package:Readme/core/cache/blog_engagement_store.dart';
 import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/app_image.dart';
 import 'package:Readme/core/utils/text_style.dart';
@@ -84,6 +85,7 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen> {
       }
 
       if (!mounted) return;
+      BlogEngagementStore.instance.seedAll(publishedBlogs);
       setState(() {
         _profileData = profileData;
         _publishedBlogs = publishedBlogs;

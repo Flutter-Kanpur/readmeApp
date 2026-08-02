@@ -125,7 +125,10 @@ class CommunityBlogCard extends StatelessWidget {
                   compact: true,
                 ),
                 SizedBox(width: 12.w),
-                BlogViewCount(count: article.blog.viewCount),
+                BlogViewCount(
+                  blogId: article.blog.id,
+                  count: article.blog.viewCount,
+                ),
               ],
             ),
           ],

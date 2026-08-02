@@ -1,6 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:Readme/core/cache/blog_engagement_store.dart';
+import 'package:Readme/core/cache/blog_feed_cache.dart';
+import 'package:Readme/core/cache/blog_like_cache.dart';
+import 'package:Readme/core/config/readme_host.dart';
 import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/app_image.dart';
 import 'package:Readme/core/utils/draft_storage.dart';
@@ -256,6 +260,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_socialPrefsKey(user.id));
       await DraftStorage.clearDraft();
+      BlogLikeCache.instance.invalidate();
+      BlogFeedCache.instance.invalidate();
+      BlogEngagementStore.instance.invalidate();
 
       try {
         await supabase.auth.signOut(scope: SignOutScope.local);
@@ -392,8 +399,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         ),
                       ),
                     ),
-                    SizedBox(height: 8.h),
-                    _buildDeleteCard(),
+                    if (ReadmeHost.showAccountLifecycleActions) ...[
+                      SizedBox(height: 8.h),
+                      _buildDeleteCard(),
+                    ],
                   ],
                 ),
               ),

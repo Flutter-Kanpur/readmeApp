@@ -1,4 +1,7 @@
+import 'package:Readme/core/cache/blog_engagement_store.dart';
+import 'package:Readme/core/cache/blog_like_cache.dart';
 import 'package:Readme/core/utils/app_colors.dart';
+import 'package:Readme/features/blog_detail/data/datasource/blog_like_datasource.dart';
 import 'package:Readme/core/utils/app_image.dart';
 import 'package:Readme/core/utils/text_style.dart';
 import 'package:Readme/features/communities/data/datasource/community_remote_datasource.dart';
@@ -102,6 +105,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
       }
 
       if (!mounted) return;
+      BlogEngagementStore.instance.seedAll(articles.map((a) => a.blog));
       setState(() {
         _community = community;
         _stats = stats;
@@ -113,6 +117,14 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
         _newsletterStats = newsletterStats;
         _isLoading = false;
       });
+      if (userId != null && articles.isNotEmpty) {
+        await BlogLikeCache.instance.preload(
+          userId: userId,
+          blogIds: articles.map((a) => a.blog.id).toList(),
+          datasource: BlogLikeDatasource(ReadmeSupabase.client),
+        );
+        if (mounted) setState(() {});
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {

@@ -120,7 +120,7 @@ class ProfileBlogCard extends StatelessWidget {
                       compact: true,
                     ),
                     SizedBox(width: 12.w),
-                    BlogViewCount(count: blog.viewCount),
+                    BlogViewCount(blogId: blog.id, count: blog.viewCount),
                   ],
                 ),
               ],

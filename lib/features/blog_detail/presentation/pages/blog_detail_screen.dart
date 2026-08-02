@@ -188,6 +188,7 @@ class BlogDetailScreen extends StatelessWidget {
                           ),
                           SizedBox(width: 16.w),
                           BlogViewCount(
+                            blogId: blog.id,
                             count: blog.viewCount,
                             compact: false,
                           ),

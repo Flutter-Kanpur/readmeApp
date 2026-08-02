@@ -1,17 +1,17 @@
+import 'package:Readme/core/cache/blog_engagement_store.dart';
 import 'package:Readme/core/cache/blog_like_cache.dart';
+import 'package:Readme/core/network/readme_supabase.dart';
 import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/text_style.dart';
 import 'package:Readme/features/blog_detail/data/datasource/blog_like_datasource.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:Readme/core/network/readme_supabase.dart';
 
 /// Heart-style support control for articles.
 ///
-/// Compact mode is meant for list cards (count + icon). Expanded mode is used
-/// on the article detail screen with a labeled pill button.
+/// Counts come from [BlogEngagementStore] (seeded from feed rows). Liked state
+/// comes from [BlogLikeCache] (batch-preloaded). Never re-counts likes on mount.
 class BlogSupportButton extends StatefulWidget {
   const BlogSupportButton({
     super.key,
@@ -36,20 +36,20 @@ class _BlogSupportButtonState extends State<BlogSupportButton>
   late AnimationController _bounceController;
   late Animation<double> _bounceScale;
 
-  bool _isLoading = true;
   bool _isLiked = false;
   bool _actionLoading = false;
-  late int _likeCount;
 
   @override
   void initState() {
     super.initState();
     _datasource = BlogLikeDatasource(ReadmeSupabase.client);
-    _likeCount = widget.initialLikeCount;
-    _isLiked = widget.initialIsLiked ?? false;
-    _isLoading = widget.compact && widget.initialIsLiked != null
-        ? false
-        : !widget.compact;
+    final store = BlogEngagementStore.instance;
+    store.seed(
+      blogId: widget.blogId,
+      likeCount: widget.initialLikeCount,
+      viewCount: store.viewCount(widget.blogId),
+    );
+    _isLiked = _resolveLiked();
     _bounceController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 280),
@@ -62,89 +62,49 @@ class _BlogSupportButtonState extends State<BlogSupportButton>
         ]).animate(
           CurvedAnimation(parent: _bounceController, curve: Curves.easeOut),
         );
-    _loadState();
+    BlogEngagementStore.instance.addListener(_onStoreChanged);
   }
 
   @override
   void didUpdateWidget(covariant BlogSupportButton oldWidget) {
     super.didUpdateWidget(oldWidget);
+    final store = BlogEngagementStore.instance;
     if (oldWidget.blogId != widget.blogId) {
-      _likeCount = widget.initialLikeCount;
-      _isLiked = false;
-      _loadState();
-    } else if (oldWidget.initialLikeCount != widget.initialLikeCount &&
-        !_isLiked) {
-      _likeCount = widget.initialLikeCount;
+      store.seed(
+        blogId: widget.blogId,
+        likeCount: widget.initialLikeCount,
+        viewCount: store.viewCount(widget.blogId),
+      );
+      _isLiked = _resolveLiked();
+    } else if (oldWidget.initialLikeCount != widget.initialLikeCount) {
+      store.seed(
+        blogId: widget.blogId,
+        likeCount: widget.initialLikeCount,
+        viewCount: store.viewCount(widget.blogId),
+      );
     }
   }
 
   @override
   void dispose() {
+    BlogEngagementStore.instance.removeListener(_onStoreChanged);
     _bounceController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadState() async {
-    if (widget.compact) {
-      if (widget.initialIsLiked != null) {
-        if (mounted) setState(() => _isLoading = false);
-        return;
-      }
-
-      final cachedLike = BlogLikeCache.instance.isLiked(widget.blogId);
-      if (cachedLike != null) {
-        if (mounted) {
-          setState(() {
-            _isLiked = cachedLike;
-            _isLoading = false;
-          });
-        }
-        return;
-      }
-
-      final user = ReadmeSupabase.client.auth.currentUser;
-      if (user == null) {
-        if (mounted) setState(() => _isLoading = false);
-        return;
-      }
-      try {
-        final liked = await _datasource.isLikedByUser(
-          blogId: widget.blogId,
-          userId: user.id,
-        );
-        if (!mounted) return;
-        setState(() {
-          _isLiked = liked;
-          _isLoading = false;
-        });
-      } catch (_) {
-        if (mounted) setState(() => _isLoading = false);
-      }
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    try {
-      final count = await _datasource.fetchLikeCount(widget.blogId);
-      final user = ReadmeSupabase.client.auth.currentUser;
-      var liked = false;
-      if (user != null) {
-        liked = await _datasource.isLikedByUser(
-          blogId: widget.blogId,
-          userId: user.id,
-        );
-      }
-      if (!mounted) return;
-      setState(() {
-        _likeCount = count;
-        _isLiked = liked;
-        _isLoading = false;
-      });
-    } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
-    }
+  void _onStoreChanged() {
+    if (mounted) setState(() {});
   }
+
+  bool _resolveLiked() {
+    if (widget.initialIsLiked != null) return widget.initialIsLiked!;
+    return BlogLikeCache.instance.isLiked(widget.blogId) ?? false;
+  }
+
+  int get _likeCount => BlogEngagementStore.instance.likeCount(
+        widget.blogId,
+        fallback: widget.initialLikeCount,
+      );
 
   Future<void> _toggleSupport() async {
     if (_actionLoading) return;
@@ -160,12 +120,13 @@ class _BlogSupportButtonState extends State<BlogSupportButton>
 
     setState(() {
       _isLiked = !wasLiked;
-      _likeCount = wasLiked
-          ? (_likeCount > 0 ? _likeCount - 1 : 0)
-          : _likeCount + 1;
       _actionLoading = true;
     });
     BlogLikeCache.instance.setLiked(widget.blogId, !wasLiked);
+    BlogEngagementStore.instance.applyLikeDelta(
+      widget.blogId,
+      liked: !wasLiked,
+    );
 
     if (!wasLiked) {
       _bounceController.forward(from: 0);
@@ -179,11 +140,9 @@ class _BlogSupportButtonState extends State<BlogSupportButton>
       }
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _isLiked = wasLiked;
-        _likeCount = previousCount;
-      });
+      setState(() => _isLiked = wasLiked);
       BlogLikeCache.instance.setLiked(widget.blogId, wasLiked);
+      BlogEngagementStore.instance.setLikeCount(widget.blogId, previousCount);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
       );
@@ -235,7 +194,7 @@ class _BlogSupportButtonState extends State<BlogSupportButton>
               _buildHeart(size: 18.sp),
               SizedBox(width: 6.w),
               Text(
-                _isLoading ? '—' : _formatCount(_likeCount),
+                _formatCount(_likeCount),
                 style: textStyle_12RegularGrey().copyWith(
                   fontSize: 12.sp,
                   fontWeight: FontWeight.w600,
@@ -253,7 +212,7 @@ class _BlogSupportButtonState extends State<BlogSupportButton>
 
   Widget _buildExpanded() {
     final label = _isLiked ? 'Supported' : 'Support';
-    final countLabel = _isLoading ? '' : ' · ${_formatCount(_likeCount)}';
+    final countLabel = ' · ${_formatCount(_likeCount)}';
 
     return Material(
       color: _isLiked ? const Color(0xFFFFF1F2) : Colors.white,

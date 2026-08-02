@@ -2,6 +2,7 @@ import 'package:Readme/core/network/supabase_connectivity.dart';
 import 'package:Readme/core/router/routes.dart';
 import 'package:Readme/core/secrets/app_secrets.dart';
 import 'package:Readme/core/updater/app_upgrader.dart';
+import 'package:Readme/core/utils/assets_path.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_quill/flutter_quill.dart';
@@ -12,6 +13,7 @@ import 'package:Readme/core/network/readme_supabase.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AssetsPath.init();
   await dotenv.load(fileName: '.env');
 
   final envIssue = EnvValidator.validate();

@@ -9,6 +9,7 @@ class BlogModel extends Blog {
     super.coverImage,
     required super.category,
     required super.createdAt,
+    super.publishedAt,
     required super.isPublished,
     required super.author,
     super.coauthors,
@@ -28,6 +29,7 @@ class BlogModel extends Blog {
     final profile = json['profiles'];
     final profileId = profile?['id'] as String?;
     final community = json['communities'] as Map<String, dynamic>?;
+    final createdAt = DateTime.parse(json['created_at'] as String);
 
     final primaryAuthor = Author(
       id: authorId ?? profileId,
@@ -57,7 +59,8 @@ class BlogModel extends Blog {
           : normalizeRawContent(json['content']),
       coverImage: json['cover_image'],
       category: json['category'] ?? '',
-      createdAt: DateTime.parse(json['created_at']),
+      createdAt: createdAt,
+      publishedAt: _parsePublishedAt(json, createdAt),
       isPublished: json['is_published'] ?? false,
       imageUrls: imageUrls,
       communityId: json['community_id'] as String?,
@@ -70,11 +73,25 @@ class BlogModel extends Blog {
     );
   }
 
+  static DateTime? _parsePublishedAt(
+    Map<String, dynamic> json,
+    DateTime createdAt,
+  ) {
+    final raw = json['published_at'];
+    if (raw is String && raw.isNotEmpty) {
+      return DateTime.tryParse(raw);
+    }
+    // Fallback while older rows / clients lack the column.
+    if (json['is_published'] == true) return createdAt;
+    return null;
+  }
+
   static int _parseLikeCount(Map<String, dynamic> json) {
     final direct = json['like_count'];
     if (direct is int) return direct;
     if (direct is num) return direct.toInt();
 
+    // Rollout fallback if denormalized column is not selected yet.
     final likes = json['blog_likes'];
     if (likes is List && likes.isNotEmpty) {
       final first = likes.first;

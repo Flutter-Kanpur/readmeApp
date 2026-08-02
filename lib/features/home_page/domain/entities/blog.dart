@@ -5,6 +5,8 @@ class Blog {
   final String? coverImage;
   final String category;
   final DateTime createdAt;
+  /// When the post went live. Prefer this over [createdAt] for feed ordering.
+  final DateTime? publishedAt;
   final bool isPublished;
   final Author author;
   final List<Author> coauthors;
@@ -22,6 +24,7 @@ class Blog {
     this.coverImage,
     required this.category,
     required this.createdAt,
+    this.publishedAt,
     required this.isPublished,
     required this.author,
     this.coauthors = const [],
@@ -33,6 +36,9 @@ class Blog {
     this.viewCount = 0,
   });
 
+  /// Sort / display time for published posts.
+  DateTime get wentLiveAt => publishedAt ?? createdAt;
+
   Blog copyWith({
     String? id,
     String? title,
@@ -40,6 +46,7 @@ class Blog {
     String? coverImage,
     String? category,
     DateTime? createdAt,
+    DateTime? publishedAt,
     bool? isPublished,
     Author? author,
     List<Author>? coauthors,
@@ -57,6 +64,7 @@ class Blog {
       coverImage: coverImage ?? this.coverImage,
       category: category ?? this.category,
       createdAt: createdAt ?? this.createdAt,
+      publishedAt: publishedAt ?? this.publishedAt,
       isPublished: isPublished ?? this.isPublished,
       author: author ?? this.author,
       coauthors: coauthors ?? this.coauthors,

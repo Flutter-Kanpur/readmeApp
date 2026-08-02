@@ -1,3 +1,4 @@
+import 'package:Readme/core/cache/blog_engagement_store.dart';
 import 'package:Readme/core/cache/blog_feed_cache.dart';
 import 'package:Readme/core/cache/blog_like_cache.dart';
 import 'package:Readme/core/utils/app_colors.dart';
@@ -58,6 +59,9 @@ class _SearchScreenState extends State<SearchScreen> {
 
     if (!forceRefresh && BlogFeedCache.instance.isFresh) {
       final cachedArticles = _articlesFromCache();
+      BlogEngagementStore.instance.seedAll(
+        cachedArticles.map((a) => a.blog),
+      );
       setState(() {
         _articles = cachedArticles;
         _isLoading = false;
@@ -85,6 +89,7 @@ class _SearchScreenState extends State<SearchScreen> {
           )
           .toList();
       if (!mounted) return;
+      BlogEngagementStore.instance.seedAll(blogs);
       setState(() {
         _articles = articles;
         _isLoading = false;

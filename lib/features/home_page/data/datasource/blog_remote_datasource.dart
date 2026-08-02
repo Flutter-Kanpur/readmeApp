@@ -7,10 +7,11 @@ class BlogRemoteDatasource {
 
   final SupabaseClient client;
 
-  static const defaultPageSize = 30;
+  static const defaultPageSize = 20;
 
   /// Includes `content` so list cards can show a subtitle preview.
   /// Pagination (`range`) keeps payload size bounded.
+  /// Engagement uses denormalized columns — never `blog_likes (count)`.
   static const String _blogListSelectBase = '''
       blog_id,
       author_id,
@@ -18,10 +19,12 @@ class BlogRemoteDatasource {
       content,
       cover_image,
       created_at,
+      published_at,
       category,
       is_published,
       community_id,
       view_count,
+      like_count,
       profiles!inner (
         id,
         name,
@@ -47,10 +50,12 @@ class BlogRemoteDatasource {
       content,
       cover_image,
       created_at,
+      published_at,
       category,
       is_published,
       community_id,
       view_count,
+      like_count,
       profiles!inner (
         id,
         name,
@@ -69,50 +74,34 @@ class BlogRemoteDatasource {
       )
     ''';
 
-  static const String _blogListSelectWithLikes =
-      '''
-      $_blogListSelectBase,
-      blog_likes (count)
-    ''';
-
-  static const String _blogDetailSelectWithLikes =
-      '''
-      $_blogDetailSelectBase,
-      blog_likes (count)
-    ''';
-
-  bool _likesUnavailable = false;
+  bool _likeCountUnavailable = false;
   bool _viewCountUnavailable = false;
+  bool _publishedAtUnavailable = false;
 
-  String get _blogListSelect {
-    var select = _likesUnavailable ? _blogListSelectBase : _blogListSelectWithLikes;
+  String get _blogListSelect => _applySelectFallbacks(_blogListSelectBase);
+
+  String get _blogDetailSelect => _applySelectFallbacks(_blogDetailSelectBase);
+
+  String _applySelectFallbacks(String select) {
+    var result = select;
     if (_viewCountUnavailable) {
-      select = select.replaceAll(RegExp(r',\s*view_count'), '');
+      result = result.replaceAll(RegExp(r',\s*view_count'), '');
     }
-    return select;
-  }
-
-  String get _blogDetailSelect {
-    var select =
-        _likesUnavailable ? _blogDetailSelectBase : _blogDetailSelectWithLikes;
-    if (_viewCountUnavailable) {
-      select = select.replaceAll(RegExp(r',\s*view_count'), '');
+    if (_likeCountUnavailable) {
+      result = result.replaceAll(RegExp(r',\s*like_count'), '');
     }
-    return select;
+    if (_publishedAtUnavailable) {
+      result = result.replaceAll(RegExp(r',\s*published_at'), '');
+    }
+    return result;
   }
 
-  bool _isMissingLikesRelation(Object error) {
+  bool _isMissingColumn(Object error, String column) {
     final message = error.toString().toLowerCase();
-    return message.contains('blog_likes') ||
-        message.contains('could not find') ||
-        message.contains('relationship') ||
-        message.contains('pgrst200');
-  }
-
-  bool _isMissingViewCount(Object error) {
-    final message = error.toString().toLowerCase();
-    return message.contains('view_count') ||
-        message.contains('column') && message.contains('does not exist');
+    return message.contains(column) &&
+        (message.contains('column') ||
+            message.contains('does not exist') ||
+            message.contains('could not find'));
   }
 
   Future<List<Map<String, dynamic>>> _selectPublishedBlogs({
@@ -125,9 +114,11 @@ class BlogRemoteDatasource {
       if (authorId != null) {
         query = query.eq('author_id', authorId);
       }
+      final orderColumn =
+          _publishedAtUnavailable ? 'created_at' : 'published_at';
       final response = await query
           .eq('is_published', true)
-          .order('created_at', ascending: false)
+          .order(orderColumn, ascending: false, nullsFirst: false)
           .range(offset, offset + limit - 1);
       return List<Map<String, dynamic>>.from(response as List);
     }
@@ -135,7 +126,7 @@ class BlogRemoteDatasource {
     try {
       return await run(_blogListSelect);
     } catch (e) {
-      if (!_viewCountUnavailable && _isMissingViewCount(e)) {
+      if (!_viewCountUnavailable && _isMissingColumn(e, 'view_count')) {
         _viewCountUnavailable = true;
         return _selectPublishedBlogs(
           authorId: authorId,
@@ -143,9 +134,23 @@ class BlogRemoteDatasource {
           offset: offset,
         );
       }
-      if (_likesUnavailable || !_isMissingLikesRelation(e)) rethrow;
-      _likesUnavailable = true;
-      return run(_blogListSelect);
+      if (!_likeCountUnavailable && _isMissingColumn(e, 'like_count')) {
+        _likeCountUnavailable = true;
+        return _selectPublishedBlogs(
+          authorId: authorId,
+          limit: limit,
+          offset: offset,
+        );
+      }
+      if (!_publishedAtUnavailable && _isMissingColumn(e, 'published_at')) {
+        _publishedAtUnavailable = true;
+        return _selectPublishedBlogs(
+          authorId: authorId,
+          limit: limit,
+          offset: offset,
+        );
+      }
+      rethrow;
     }
   }
 
@@ -165,14 +170,19 @@ class BlogRemoteDatasource {
       final row = await run(_blogDetailSelect);
       return row == null ? null : BlogModel.fromJson(row);
     } catch (e) {
-      if (!_viewCountUnavailable && _isMissingViewCount(e)) {
+      if (!_viewCountUnavailable && _isMissingColumn(e, 'view_count')) {
         _viewCountUnavailable = true;
         return fetchBlogById(blogId);
       }
-      if (_likesUnavailable || !_isMissingLikesRelation(e)) rethrow;
-      _likesUnavailable = true;
-      final row = await run(_blogDetailSelect);
-      return row == null ? null : BlogModel.fromJson(row);
+      if (!_likeCountUnavailable && _isMissingColumn(e, 'like_count')) {
+        _likeCountUnavailable = true;
+        return fetchBlogById(blogId);
+      }
+      if (!_publishedAtUnavailable && _isMissingColumn(e, 'published_at')) {
+        _publishedAtUnavailable = true;
+        return fetchBlogById(blogId);
+      }
+      rethrow;
     }
   }
 

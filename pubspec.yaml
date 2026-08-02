@@ -93,8 +93,9 @@ flutter:
     - assets/icons/
     - assets/lottie/
     - assets/lottie/empty.json
-    # Do not list .env here — it is gitignored, so embedding Readme as a
-    # package dependency fails asset bundling for the whole package.
+    # Required by flutter_dotenv at runtime. Keep .env gitignored; Flutter still
+    # bundles the local file when it exists on disk.
+    - .env
 
 
   # An image asset can refer to one or more resolution-specific "variants", see

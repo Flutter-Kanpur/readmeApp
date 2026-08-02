@@ -1,15 +1,15 @@
+import 'package:Readme/core/cache/blog_like_cache.dart';
+import 'package:Readme/core/network/readme_supabase.dart';
+import 'package:Readme/core/utils/app_colors.dart';
+import 'package:Readme/core/utils/app_image.dart';
 import 'package:Readme/core/utils/quill_content_parser.dart';
 import 'package:Readme/core/utils/text_style.dart';
+import 'package:Readme/features/blog_detail/presentation/widgets/blog_support_button.dart';
+import 'package:Readme/features/blog_detail/presentation/widgets/blog_view_count.dart';
+import 'package:Readme/features/home_page/domain/entities/blog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
-
-import '../../../../core/cache/blog_like_cache.dart';
-import '../../../../core/utils/app_colors.dart';
-import '../../../../core/utils/app_image.dart';
-import '../../../blog_detail/presentation/widgets/blog_support_button.dart';
-import '../../../blog_detail/presentation/widgets/blog_view_count.dart';
-import '../../domain/entities/blog.dart';
 
 class BlogCard extends StatelessWidget {
   final Blog blog;
@@ -21,6 +21,21 @@ class BlogCard extends StatelessWidget {
     return preview.isEmpty ? null : preview;
   }
 
+  String? _coverUrl() {
+    String storagePublicUrl(String path) {
+      return ReadmeSupabase.client.storage.from('blog_images').getPublicUrl(path);
+    }
+
+    return resolveBlogImageUrl(
+          blog.coverImage,
+          storagePathToUrl: storagePublicUrl,
+        ) ??
+        extractFirstImageUrl(
+          blog.content,
+          storagePathToUrl: storagePublicUrl,
+        );
+  }
+
   @override
   Widget build(BuildContext context) {
     final authors = blog.allAuthors;
@@ -29,22 +44,22 @@ class BlogCard extends StatelessWidget {
     final hasCommunity =
         blog.communityName != null && blog.communityName!.trim().isNotEmpty;
     final hasCategory = blog.category.isNotEmpty;
-
     final preview = _previewText(blog.content);
+    final coverUrl = _coverUrl();
 
     return GestureDetector(
       onTap: () => context.push('/blog/${blog.id}', extra: blog),
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
+        padding: EdgeInsets.all(16.w),
         decoration: BoxDecoration(
           color: Colors.white,
-          border: Border.all(color: Colors.grey.shade200),
-          borderRadius: BorderRadius.circular(20.r),
+          border: Border.all(color: const Color(0xFFE8E8E8)),
+          borderRadius: BorderRadius.circular(24.r),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 2,
-              offset: const Offset(0, 2),
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -66,9 +81,9 @@ class BlogCard extends StatelessWidget {
                     Text(
                       blog.category.toUpperCase(),
                       style: textStyle_14BoldLinkBlue().copyWith(
-                        fontSize: 10.sp,
+                        fontSize: 11.sp,
                         fontWeight: FontWeight.w700,
-                        letterSpacing: 0.4,
+                        letterSpacing: 0.5,
                         color: AppColors.linkBlue,
                       ),
                     ),
@@ -90,8 +105,8 @@ class BlogCard extends StatelessWidget {
                         authorNames,
                         style: textStyle_16BoldBlack().copyWith(
                           fontSize: 14.sp,
-                          fontWeight: FontWeight.w600,
-                          height: 1.2,
+                          fontWeight: FontWeight.w700,
+                          height: 1.25,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -111,19 +126,36 @@ class BlogCard extends StatelessWidget {
                 ),
               ],
             ),
-            SizedBox(height: 10.h),
+            if (coverUrl != null) ...[
+              SizedBox(height: 14.h),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(18.r),
+                child: AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: AppImage(
+                    source: coverUrl,
+                    width: double.infinity,
+                    height: double.infinity,
+                    fit: BoxFit.cover,
+                    placeholder: Container(color: Colors.grey.shade100),
+                  ),
+                ),
+              ),
+            ],
+            SizedBox(height: 14.h),
             Text(
               blog.title,
               style: textStyle_16BoldBlack().copyWith(
-                fontSize: 16.sp,
+                fontSize: 18.sp,
                 fontWeight: FontWeight.w700,
-                height: 1.25,
+                height: 1.3,
+                color: AppColors.black,
               ),
-              maxLines: 2,
+              maxLines: 4,
               overflow: TextOverflow.ellipsis,
             ),
             if (preview != null) ...[
-              SizedBox(height: 10.h),
+              SizedBox(height: 8.h),
               Text(
                 preview,
                 maxLines: 3,
@@ -144,8 +176,8 @@ class BlogCard extends StatelessWidget {
                   initialIsLiked: BlogLikeCache.instance.isLiked(blog.id),
                   compact: true,
                 ),
-                SizedBox(width: 12.w),
-                BlogViewCount(count: blog.viewCount),
+                SizedBox(width: 14.w),
+                BlogViewCount(blogId: blog.id, count: blog.viewCount),
               ],
             ),
           ],
@@ -164,7 +196,7 @@ class _CommunityTag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+      padding: EdgeInsets.fromLTRB(6.w, 5.h, 10.w, 5.h),
       decoration: BoxDecoration(
         color: const Color(0xFFF3F0FF),
         borderRadius: BorderRadius.circular(999),
@@ -172,26 +204,33 @@ class _CommunityTag extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (logoUrl != null) ...[
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4.r),
-              child: AppImage(
-                source: logoUrl,
-                width: 16.w,
-                height: 16.w,
-                fit: BoxFit.cover,
-                placeholder: SizedBox(width: 16.w, height: 16.w),
+          ClipOval(
+            child: AppImage(
+              source: logoUrl,
+              width: 18.w,
+              height: 18.w,
+              fit: BoxFit.cover,
+              placeholder: Container(
+                width: 18.w,
+                height: 18.w,
+                color: const Color(0xFFE4DEFF),
+                alignment: Alignment.center,
+                child: Icon(
+                  Icons.groups_outlined,
+                  size: 11.sp,
+                  color: AppColors.linkBlue,
+                ),
               ),
             ),
-            SizedBox(width: 6.w),
-          ],
+          ),
+          SizedBox(width: 6.w),
           Text(
             name.toUpperCase(),
             style: textStyle_12RegularGrey().copyWith(
               fontSize: 10.sp,
               fontWeight: FontWeight.w700,
-              letterSpacing: 0.3,
-              color: AppColors.linkBlue,
+              letterSpacing: 0.35,
+              color: const Color(0xFF5B4BDB),
             ),
           ),
         ],
@@ -209,7 +248,7 @@ class _AuthorAvatarStack extends StatelessWidget {
   Widget build(BuildContext context) {
     if (authors.isEmpty) {
       return CircleAvatar(
-        radius: 16.r,
+        radius: 18.r,
         backgroundColor: Colors.grey.shade200,
         child: Icon(Icons.person, size: 18.r, color: Colors.grey),
       );
@@ -218,12 +257,12 @@ class _AuthorAvatarStack extends StatelessWidget {
     if (authors.length == 1) {
       final author = authors.first;
       return CircleAvatar(
-        radius: 16.r,
+        radius: 18.r,
         backgroundColor: Colors.grey.shade200,
         backgroundImage: imageProviderFromSource(
           author.avatarUrl,
-          width: 32,
-          height: 32,
+          width: 36,
+          height: 36,
         ),
         child: author.avatarUrl == null
             ? Icon(Icons.person, size: 18.r, color: Colors.grey)
@@ -232,9 +271,9 @@ class _AuthorAvatarStack extends StatelessWidget {
     }
 
     final visible = authors.take(3).toList();
-    final radius = 14.r;
+    final radius = 16.r;
     final diameter = radius * 2;
-    final overlap = diameter * 0.4;
+    final overlap = diameter * 0.38;
     final stride = diameter - overlap;
     final width = diameter + (visible.length - 1) * stride;
 
@@ -250,15 +289,15 @@ class _AuthorAvatarStack extends StatelessWidget {
               child: Container(
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 1.5),
+                  border: Border.all(color: Colors.white, width: 2),
                 ),
                 child: CircleAvatar(
-                  radius: radius - 1.5,
+                  radius: radius - 2,
                   backgroundColor: Colors.grey.shade200,
                   backgroundImage: imageProviderFromSource(
                     visible[i].avatarUrl,
-                    width: 28,
-                    height: 28,
+                    width: 32,
+                    height: 32,
                   ),
                   child: visible[i].avatarUrl == null
                       ? Icon(Icons.person, size: radius, color: Colors.grey)
