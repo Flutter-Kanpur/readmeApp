@@ -13,6 +13,9 @@ class ReadmeSupabase {
 
   static SupabaseClient get client => _override ?? Supabase.instance.client;
 
+  /// True after [bind] — ReadMe is running inside a host app.
+  static bool get isBound => _override != null;
+
   /// Bind a host-provided Supabase client and mark ReadMe as embedded
   /// (hides standalone-only account actions like logout / delete).
   static void bind(SupabaseClient client) {
