@@ -81,6 +81,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadAppVersion() async {
+    if (!ReadmeHost.showAccountLifecycleActions) return;
     final info = await PackageInfo.fromPlatform();
     if (!mounted) return;
     setState(() {
@@ -265,7 +266,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                         ),
-                        if (ReadmeHost.showAccountLifecycleActions)
+                        if (ReadmeHost.showAccountLifecycleActions) ...[
                           Center(
                             child: TextButton(
                               onPressed: _confirmLogout,
@@ -279,8 +280,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                             ),
                           ),
-                        SizedBox(height: 8.h),
-                        _buildVersionFooter(),
+                          SizedBox(height: 8.h),
+                          _buildVersionFooter(),
+                        ],
                       ],
                     ),
                   ),
