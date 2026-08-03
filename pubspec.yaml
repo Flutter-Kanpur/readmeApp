@@ -93,9 +93,6 @@ flutter:
     - assets/icons/
     - assets/lottie/
     - assets/lottie/empty.json
-    # Required by flutter_dotenv at runtime. Keep .env gitignored; Flutter still
-    # bundles the local file when it exists on disk.
-    - .env
 
 
   # An image asset can refer to one or more resolution-specific "variants", see

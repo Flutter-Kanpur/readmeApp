@@ -52,8 +52,8 @@ class ConfigErrorApp extends StatelessWidget {
                 Text(message),
                 const SizedBox(height: 16),
                 const Text(
-                  'Update the .env file in the project root (the app bundles .env, not .env.local), '
-                  'then run: flutter clean && flutter run',
+                  'Copy .env.example to .env, fill in your keys, then run '
+                  './tool/enable_standalone_env.sh and flutter clean && flutter run.',
                 ),
               ],
             ),
