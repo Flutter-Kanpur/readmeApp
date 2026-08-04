@@ -76,12 +76,14 @@ class _NavBarSlot extends StatelessWidget {
     required this.label,
     required this.labelColor,
     required this.onTap,
+    this.isActive = false,
   });
 
   final Widget icon;
   final String label;
   final Color labelColor;
   final VoidCallback onTap;
+  final bool isActive;
 
   static double get iconSlotHeight => 28.h;
 
@@ -109,7 +111,7 @@ class _NavBarSlot extends StatelessWidget {
                 style: TextStyle(
                   fontFamily: 'ProductSans',
                   fontSize: 12.sp,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: isActive ?FontWeight.w700 :FontWeight.w500 ,
                   color: labelColor,
                   height: 1.2,
                 ),
@@ -135,7 +137,7 @@ class _DraftCtaButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isActive ? AppColors.linkBlue : AppColors.subtitles;
+    final color = isActive ? AppColors.linkBlue : AppColors.lightGrey;
 
     return _NavBarSlot(
       onTap: onTap,
@@ -195,7 +197,7 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isSelected ? AppColors.linkBlue : AppColors.subtitles;
+    final color = isSelected ? AppColors.linkBlue : AppColors.lightGrey;
 
     return _NavBarSlot(
       onTap: onTap,

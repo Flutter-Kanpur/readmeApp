@@ -8,29 +8,37 @@ import 'package:flutter/material.dart';
 
 /// Loads full blog content on demand and records a view when opened.
 class BlogDetailLoader extends StatefulWidget {
-  const BlogDetailLoader({super.key, required this.blog});
+  const BlogDetailLoader({
+    super.key,
+    required this.blogId,
+    this.initialBlog,
+  });
 
-  final Blog blog;
+  final String blogId;
+  final Blog? initialBlog;
 
   @override
   State<BlogDetailLoader> createState() => _BlogDetailLoaderState();
 }
 
 class _BlogDetailLoaderState extends State<BlogDetailLoader> {
-  late Blog _blog;
+  Blog? _blog;
   bool _isLoading = false;
   String? _error;
   bool _viewRecorded = false;
 
+  bool get _hasCachedContent =>
+      widget.initialBlog != null && widget.initialBlog!.content.trim().isNotEmpty;
+
   @override
   void initState() {
     super.initState();
-    _blog = widget.blog;
-    BlogEngagementStore.instance.seedEngagementFromBlog(_blog);
-    if (_blog.content.trim().isEmpty) {
-      _loadFullBlog();
-    } else {
+    if (_hasCachedContent) {
+      _blog = widget.initialBlog;
+      BlogEngagementStore.instance.seedEngagementFromBlog(_blog!);
       _recordView();
+    } else {
+      _loadFullBlog();
     }
   }
 
@@ -42,7 +50,7 @@ class _BlogDetailLoaderState extends State<BlogDetailLoader> {
 
     try {
       final datasource = BlogRemoteDatasource(ReadmeSupabase.client);
-      final fullBlog = await datasource.fetchBlogById(_blog.id);
+      final fullBlog = await datasource.fetchBlogById(widget.blogId);
       if (!mounted) return;
 
       if (fullBlog == null) {
@@ -69,18 +77,18 @@ class _BlogDetailLoaderState extends State<BlogDetailLoader> {
   }
 
   Future<void> _recordView() async {
-    if (_viewRecorded) return;
+    if (_viewRecorded || _blog == null) return;
     _viewRecorded = true;
 
     final latest = await BlogViewDatasource(
       ReadmeSupabase.client,
-    ).recordView(_blog.id);
+    ).recordView(_blog!.id);
 
     if (!mounted || latest == null) return;
 
-    BlogEngagementStore.instance.applyViewCount(_blog.id, latest);
-    if (latest != _blog.viewCount) {
-      setState(() => _blog = _blog.copyWith(viewCount: latest));
+    BlogEngagementStore.instance.applyViewCount(_blog!.id, latest);
+    if (latest != _blog!.viewCount) {
+      setState(() => _blog = _blog!.copyWith(viewCount: latest));
     }
   }
 
@@ -101,6 +109,13 @@ class _BlogDetailLoaderState extends State<BlogDetailLoader> {
       );
     }
 
-    return BlogDetailScreen(blog: _blog);
+    final blog = _blog;
+    if (blog == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    return BlogDetailScreen(blog: blog);
   }
 }

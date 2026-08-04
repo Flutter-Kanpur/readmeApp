@@ -148,8 +148,9 @@ class AppRouter {
         name: 'blog_detail',
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) {
-          final blog = state.extra as Blog;
-          return BlogDetailLoader(blog: blog);
+          final id = state.pathParameters['id']!;
+          final blog = state.extra is Blog ? state.extra as Blog : null;
+          return BlogDetailLoader(blogId: id, initialBlog: blog);
         },
       ),
       GoRoute(

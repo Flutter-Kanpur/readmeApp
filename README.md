@@ -40,6 +40,39 @@ Remove the local `.env` asset line so the committed pubspec stays package-safe:
 
 No ReadMe `.env` is required in the package. The host app loads its own `.env` and binds ReadMe Supabase via `ReadmeSupabase.bind`. Ensure the host `.env` includes `README_SUPABASE_URL`, `README_SUPABASE_ANON_KEY`, and `README_SYNC_SESSION_URL`.
 
+## Deep links (open articles in the app)
+
+Shared article URLs use this format:
+
+```text
+https://readme.flutterkanpur.in/blogs/articles/{blog_id}
+```
+
+When the app is installed and domain verification is configured, tapping such a link (e.g. from WhatsApp) opens the article inside ReadMe instead of the browser.
+
+### Production setup
+
+1. **Android** — In Play Console → Setup → App integrity, copy the **App signing key certificate** SHA-256 fingerprint into [`readme_website/public/.well-known/assetlinks.json`](../readme_website/public/.well-known/assetlinks.json) (replace `REPLACE_WITH_PLAY_APP_SIGNING_SHA256`).
+
+2. **iOS** — Replace `REPLACE_TEAM_ID` in [`readme_website/public/.well-known/apple-app-site-association`](../readme_website/public/.well-known/apple-app-site-association) with your Apple Developer Team ID. Enable **Associated Domains** for `com.drishtant.readme` in the Apple Developer portal.
+
+3. **Deploy** the website so both files are live at:
+   - `https://readme.flutterkanpur.in/.well-known/assetlinks.json`
+   - `https://readme.flutterkanpur.in/.well-known/apple-app-site-association`
+
+### Test on Android
+
+```bash
+# Simulate opening an article link
+adb shell am start -a android.intent.action.VIEW \
+  -d "https://readme.flutterkanpur.in/blogs/articles/YOUR_BLOG_UUID"
+
+# Check App Links verification status
+adb shell pm get-app-links com.drishtant.readme
+```
+
+App Links verification usually requires a **release/signed** build whose certificate matches `assetlinks.json`.
+
 ## Getting Started
 
 - [Flutter documentation](https://docs.flutter.dev/)

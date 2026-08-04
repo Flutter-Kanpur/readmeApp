@@ -10,6 +10,7 @@ import 'package:Readme/core/utils/quill_content_parser.dart';
 import 'package:Readme/features/blog_detail/presentation/widgets/advertisement_banner.dart';
 import 'package:Readme/features/blog_detail/presentation/widgets/author_follow_card.dart';
 import 'package:Readme/features/blog_detail/presentation/widgets/blog_content_viewer.dart';
+import 'package:Readme/features/blog_detail/presentation/widgets/blog_responses_section.dart';
 import 'package:Readme/features/blog_detail/presentation/widgets/blog_support_button.dart';
 import 'package:Readme/features/blog_detail/presentation/widgets/blog_view_count.dart';
 import 'package:Readme/features/home_page/domain/entities/blog.dart';
@@ -206,6 +207,8 @@ class BlogDetailScreen extends StatelessWidget {
                         imageUrls: blog.imageUrls,
                         excludeImageUrl: coverImageUrl,
                       ),
+                      SizedBox(height: 32.h),
+                      BlogResponsesSection(blogId: blog.id),
                       SizedBox(height: 32.h),
                       ...blog.allAuthors
                           .where((author) => author.id != null)

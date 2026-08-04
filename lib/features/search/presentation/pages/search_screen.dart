@@ -6,9 +6,9 @@ import 'package:Readme/core/utils/text_style.dart';
 import 'package:Readme/features/blog_detail/data/datasource/blog_like_datasource.dart';
 import 'package:Readme/features/home_page/data/datasource/blog_remote_datasource.dart';
 import 'package:Readme/features/home_page/presentation/state/article_category_filters.dart';
+import 'package:Readme/features/home_page/presentation/widgets/blog_card.dart';
 import 'package:Readme/features/home_page/presentation/widgets/blog_card_shimmer.dart';
 import 'package:Readme/features/search/data/models/explore_article_model.dart';
-import 'package:Readme/features/search/presentation/widgets/explore_article_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -239,8 +239,8 @@ class _SearchScreenState extends State<SearchScreen> {
                       itemCount: _filteredArticles.length,
                       separatorBuilder: (_, __) => SizedBox(height: 16.h),
                       itemBuilder: (context, index) {
-                        return ExploreArticleCard(
-                          article: _filteredArticles[index],
+                        return BlogCard(
+                          blog: _filteredArticles[index].blog,
                         );
                       },
                     ),

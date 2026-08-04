@@ -156,15 +156,6 @@ class _FilterChip extends StatelessWidget {
             color: isSelected ? AppColors.black : Colors.white,
             borderRadius: BorderRadius.circular(999),
             border: isSelected ? null : Border.all(color: Colors.grey.shade200),
-            boxShadow: isSelected
-                ? null
-                : [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
           ),
           child: Padding(
             padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 10.h),

@@ -1,3 +1,4 @@
+import 'package:Readme/core/deep_links/deep_link_bootstrap.dart';
 import 'package:Readme/core/network/supabase_connectivity.dart';
 import 'package:Readme/core/router/routes.dart';
 import 'package:Readme/core/secrets/app_secrets.dart';
@@ -75,11 +76,18 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+    DeepLinkBootstrap.init();
     ReadmeSupabase.client.auth.onAuthStateChange.listen((data) {
       if (data.event == AuthChangeEvent.passwordRecovery) {
         AppRouter.router.go('/reset-password');
       }
     });
+  }
+
+  @override
+  void dispose() {
+    DeepLinkBootstrap.dispose();
+    super.dispose();
   }
 
   @override
