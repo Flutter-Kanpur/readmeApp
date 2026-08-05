@@ -17,6 +17,7 @@ import 'package:Readme/features/communities/presentation/pages/community_dashboa
 import 'package:Readme/features/communities/presentation/pages/community_detail_screen.dart';
 import 'package:Readme/features/communities/domain/entities/community.dart';
 import 'package:Readme/features/legal/presentation/pages/privacy_policy_screen.dart';
+import 'package:Readme/core/deep_links/article_deep_link.dart';
 import 'package:Readme/features/blog_detail/presentation/pages/blog_detail_loader.dart';
 import 'package:Readme/features/home_page/domain/entities/blog.dart';
 import 'package:flutter/material.dart';
@@ -61,6 +62,12 @@ class AppRouter {
     navigatorKey: rootNavigatorKey,
     initialLocation: '/',
     redirect: (context, state) {
+      // Platform deep links arrive as /blogs/articles/:id (website path).
+      final articleRoute = ArticleDeepLink.routeFor(state.uri);
+      if (articleRoute != null && state.matchedLocation != articleRoute) {
+        return articleRoute;
+      }
+
       final loggedIn = ReadmeSupabase.client.auth.currentUser != null;
       final location = state.matchedLocation;
 

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:Readme/core/deep_links/deep_link_handler.dart';
 import 'package:app_links/app_links.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 
 /// Subscribes to cold-start and runtime app links.
 class DeepLinkBootstrap {
@@ -43,6 +44,10 @@ class DeepLinkBootstrap {
   static void _handleUri(Uri uri) {
     if (_lastHandledUri == uri) return;
     _lastHandledUri = uri;
-    DeepLinkHandler.navigate(uri);
+
+    // Wait until MaterialApp.router / GoRouter is mounted.
+    SchedulerBinding.instance.scheduleFrameCallback((_) {
+      DeepLinkHandler.navigate(uri);
+    });
   }
 }

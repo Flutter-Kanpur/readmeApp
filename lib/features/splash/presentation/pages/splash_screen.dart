@@ -72,6 +72,10 @@ class _SplashScreenState extends State<SplashScreen>
     await _exitController.forward();
     if (!mounted) return;
 
+    // Deep link redirect may have already navigated to an article.
+    final location = GoRouterState.of(context).matchedLocation;
+    if (location.startsWith('/blog/')) return;
+
     final user = ReadmeSupabase.client.auth.currentUser;
 
     if (user != null) {
