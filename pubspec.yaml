@@ -95,7 +95,7 @@ flutter:
     - assets/lottie/
     - assets/lottie/empty.json
    # Standalone only — added by tool/enable_standalone_env.sh (gitignored .env)
-    - .env
+#    - .env
 
 
   # An image asset can refer to one or more resolution-specific "variants", see
