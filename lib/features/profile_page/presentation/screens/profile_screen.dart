@@ -379,11 +379,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               final blog = _publishedBlogs[index];
               return ProfileBlogCard(
                 blog: blog,
-                onEdit: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Blog editing coming soon')),
-                  );
-                },
+                onEdit: () => context.push('/edit/${blog.id}'),
               );
             },
           ),

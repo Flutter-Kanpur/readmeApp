@@ -6,6 +6,7 @@ import 'package:Readme/core/cache/blog_feed_cache.dart';
 import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/app_image.dart';
 import 'package:Readme/core/utils/draft_storage.dart';
+import 'package:Readme/core/utils/quill_content_parser.dart';
 import 'package:Readme/core/utils/text_style.dart';
 import 'package:Readme/features/create_blog_page/presentation/widgets/blog_article_settings_panel.dart';
 import 'package:Readme/features/create_blog_page/presentation/widgets/editor_toolbar.dart';
@@ -22,7 +23,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:Readme/core/network/readme_supabase.dart';
 
 class CreateBlogScreen extends StatefulWidget {
-  const CreateBlogScreen({super.key});
+  const CreateBlogScreen({super.key, this.blogId});
+
+  /// When set, loads and updates an existing Supabase draft/post.
+  final String? blogId;
 
   @override
   State<CreateBlogScreen> createState() => _CreateBlogScreenState();
@@ -40,6 +44,9 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
   final supabase = ReadmeSupabase.client;
   final ImagePicker _imagePicker = ImagePicker();
   XFile? _coverImageFile;
+  String? _editingBlogId;
+  String? _existingCoverImageUrl;
+  bool _loadingExisting = false;
 
   String _publishAs = BlogArticleSettingsPanel.publishAsOptions.first;
   String _selectedCategory = 'Technology';
@@ -59,7 +66,12 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
   void initState() {
     super.initState();
     _controller = quill.QuillController.basic();
-    _loadDraft();
+    _editingBlogId = widget.blogId;
+    if (_editingBlogId != null) {
+      _loadExistingBlog();
+    } else {
+      _loadDraft();
+    }
   }
 
   @override
@@ -73,6 +85,73 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
   }
 
   // ================== LOAD DRAFT ==================
+  Future<void> _loadExistingBlog() async {
+    final blogId = _editingBlogId;
+    if (blogId == null) return;
+
+    setState(() => _loadingExisting = true);
+    try {
+      final user = supabase.auth.currentUser;
+      if (user == null) return;
+
+      final row = await supabase
+          .from('blogs')
+          .select('title, content, category, tags, cover_image')
+          .eq('blog_id', blogId)
+          .eq('author_id', user.id)
+          .maybeSingle();
+
+      if (row == null || !mounted) return;
+
+      titleController.text = (row['title'] as String?)?.trim() ?? '';
+      _selectedCategory = (row['category'] as String?)?.trim().isNotEmpty == true
+          ? row['category'] as String
+          : _selectedCategory;
+      _existingCoverImageUrl = row['cover_image'] as String?;
+
+      final rawTags = row['tags'];
+      _tags
+        ..clear()
+        ..addAll(
+          rawTags is List
+              ? rawTags.map((tag) => tag.toString()).where((tag) => tag.isNotEmpty)
+              : const <String>[],
+        );
+
+      final rawContent = row['content'];
+      if (rawContent != null) {
+        final normalized = normalizeRawContent(rawContent);
+        if (normalized.trim().isNotEmpty) {
+          try {
+            final decoded = jsonDecode(normalized);
+            if (decoded is List) {
+              final delta = Delta.fromJson(decoded);
+              _controller = quill.QuillController(
+                document: quill.Document.fromDelta(delta),
+                selection: const TextSelection.collapsed(offset: 0),
+              );
+            } else if (decoded is Map && decoded['ops'] is List) {
+              final delta = Delta.fromJson(decoded['ops'] as List);
+              _controller = quill.QuillController(
+                document: quill.Document.fromDelta(delta),
+                selection: const TextSelection.collapsed(offset: 0),
+              );
+            }
+          } catch (_) {
+            _controller.document.insert(0, normalized);
+          }
+        }
+      }
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not load draft: $error')),
+      );
+    } finally {
+      if (mounted) setState(() => _loadingExisting = false);
+    }
+  }
+
   Future<void> _loadDraft() async {
     final prefs = await SharedPreferences.getInstance();
     final savedTitle = prefs.getString(_draftTitleKey);
@@ -128,6 +207,60 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
 
   // ================== SAVE DRAFT ==================
   Future<void> _saveDraft() async {
+    final user = supabase.auth.currentUser;
+    if (user == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sign in to save drafts')),
+      );
+      return;
+    }
+
+    final title = titleController.text.trim();
+    if (title.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Add a title before saving')),
+      );
+      return;
+    }
+
+    try {
+      final payload = await _buildBlogPayload(isPublished: false);
+      if (_editingBlogId != null) {
+        await supabase
+            .from('blogs')
+            .update(payload)
+            .eq('blog_id', _editingBlogId!)
+            .eq('author_id', user.id);
+      } else {
+        final row = await supabase
+            .from('blogs')
+            .insert({...payload, 'author_id': user.id})
+            .select('blog_id')
+            .single();
+        _editingBlogId = row['blog_id'] as String;
+      }
+
+      await _clearDraft();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Draft saved')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not save draft: $error')),
+      );
+    }
+  }
+
+  // ================== CLEAR DRAFT ==================
+  Future<void> _clearDraft() async {
+    await DraftStorage.clearDraft();
+  }
+
+  Future<void> _persistLocalBackup() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_draftTitleKey, titleController.text.trim());
     await prefs.setString(
@@ -135,15 +268,6 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
       jsonEncode(_controller.document.toDelta().toJson()),
     );
     await DraftStorage.setSavedAt(DateTime.now());
-    if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text("Draft saved locally")));
-  }
-
-  // ================== CLEAR DRAFT ==================
-  Future<void> _clearDraft() async {
-    await DraftStorage.clearDraft();
   }
 
   // ================== COVER IMAGE ==================
@@ -233,6 +357,34 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
     };
   }
 
+  Future<Map<String, dynamic>> _buildBlogPayload({
+    required bool isPublished,
+  }) async {
+    String? coverImageUrl = _existingCoverImageUrl;
+    if (_coverImageFile != null) {
+      final bytes = await _coverImageFile!.readAsBytes();
+      final fileExt = _coverImageFile!.path.split('.').last;
+      final fileName = 'covers/${DateTime.now().millisecondsSinceEpoch}.$fileExt';
+      await supabase.storage.from('blog_images').uploadBinary(fileName, bytes);
+      coverImageUrl = supabase.storage.from('blog_images').getPublicUrl(fileName);
+    }
+
+    final rawDelta = _controller.document.toDelta().toJson();
+    final result = await _extractImagesWithPlaceholders(rawDelta);
+    coverImageUrl ??= result['cover_image'] as String?;
+
+    return {
+      'title': titleController.text.trim(),
+      'content': jsonEncode(result['content']),
+      'cover_image': coverImageUrl,
+      'category': _selectedCategory,
+      'tags': _tags.isEmpty ? null : _tags,
+      'is_published': isPublished,
+      if (isPublished)
+        'published_at': DateTime.now().toUtc().toIso8601String(),
+    };
+  }
+
   // ================== PUBLISH ==================
   Future<void> _publishBlog() async {
     final title = titleController.text.trim();
@@ -243,31 +395,28 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
       return;
     }
 
+    final user = supabase.auth.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sign in to publish')),
+      );
+      return;
+    }
+
     try {
-      String? coverImageUrl;
-      if (_coverImageFile != null) {
-        final bytes = await _coverImageFile!.readAsBytes();
-        final fileExt = _coverImageFile!.path.split('.').last;
-        final fileName = 'covers/${DateTime.now().millisecondsSinceEpoch}.$fileExt';
-        await supabase.storage.from('blog_images').uploadBinary(fileName, bytes);
-        coverImageUrl = supabase.storage.from('blog_images').getPublicUrl(fileName);
+      final payload = await _buildBlogPayload(isPublished: true);
+      if (_editingBlogId != null) {
+        await supabase
+            .from('blogs')
+            .update(payload)
+            .eq('blog_id', _editingBlogId!)
+            .eq('author_id', user.id);
+      } else {
+        await supabase.from('blogs').insert({
+          ...payload,
+          'author_id': user.id,
+        });
       }
-
-      final rawDelta = _controller.document.toDelta().toJson();
-      final result = await _extractImagesWithPlaceholders(rawDelta);
-      coverImageUrl ??= result['cover_image'] as String?;
-
-      final publishedAt = DateTime.now().toUtc().toIso8601String();
-      await supabase.from('blogs').insert({
-        'title': title,
-        'content': jsonEncode(result['content']),
-        'cover_image': coverImageUrl,
-        'category': _selectedCategory,
-        'tags': _tags.isEmpty ? null : _tags,
-        'author_id': supabase.auth.currentUser!.id,
-        'is_published': true,
-        'published_at': publishedAt,
-      });
       BlogFeedCache.instance.invalidate();
       await _clearDraft();
       if (!mounted) return;
@@ -301,6 +450,12 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_loadingExisting) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       resizeToAvoidBottomInset: true,
       body: SafeArea(

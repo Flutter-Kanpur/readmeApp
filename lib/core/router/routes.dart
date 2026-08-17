@@ -148,6 +148,15 @@ class AppRouter {
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const CreateBlogScreen(),
       ),
+      GoRoute(
+        path: '/edit/:id',
+        name: 'edit_blog',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return CreateBlogScreen(blogId: id);
+        },
+      ),
       // Full-screen on the root navigator so it stacks above the shell and
       // popping returns to home/search — not to welcome.
       GoRoute(
