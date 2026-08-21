@@ -1,27 +1,28 @@
 import 'dart:io' show Platform;
 
+import 'package:Readme/core/utils/assets_path.dart';
+import 'package:Readme/core/utils/text_style.dart';
+import 'package:Readme/features/auth/presentation/state/auth_controller_provider.dart';
 import 'package:Readme/shared/widgets/primary_button.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:Readme/core/utils/assets_path.dart';
-import 'package:Readme/core/utils/text_style.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../shared/widgets/gradient_background.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:Readme/core/network/readme_supabase.dart';
+import '../../../../shared/widgets/gradient_background.dart';
 
-class WelcomeScreen extends StatefulWidget {
+class WelcomeScreen extends ConsumerStatefulWidget {
   const WelcomeScreen({super.key});
 
   @override
-  State<WelcomeScreen> createState() => _WelcomeScreenState();
+  ConsumerState<WelcomeScreen> createState() => _WelcomeScreenState();
 }
 
-class _WelcomeScreenState extends State<WelcomeScreen> {
+class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
   bool _isGoogleLoading = false;
 
   Future<void> continueWithGoogle(BuildContext context) async {
@@ -98,8 +99,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         return;
       }
 
-      final AuthResponse result = await ReadmeSupabase.client.auth
-          .signInWithIdToken(provider: OAuthProvider.google, idToken: idToken);
+      final AuthResponse result = await ref
+          .read(authControllerProvider.notifier)
+          .signInWithGoogleIdToken(idToken);
 
       if (result.user != null && result.session != null) {
         if (!mounted) return;

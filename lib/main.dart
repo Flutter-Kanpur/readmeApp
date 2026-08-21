@@ -2,10 +2,12 @@ import 'package:Readme/core/deep_links/deep_link_bootstrap.dart';
 import 'package:Readme/core/network/supabase_connectivity.dart';
 import 'package:Readme/core/router/routes.dart';
 import 'package:Readme/core/secrets/app_secrets.dart';
+import 'package:Readme/core/updater/shorebird_patch_listener.dart';
 import 'package:Readme/core/updater/app_upgrader.dart';
 import 'package:Readme/core/utils/assets_path.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -27,7 +29,7 @@ Future<void> main() async {
     url: AppSecrets.supabaseUrl,
     anonKey: AppSecrets.supabaseAnonKey,
   );
-  runApp(const MyApp());
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class ConfigErrorApp extends StatelessWidget {
@@ -112,7 +114,9 @@ class _MyAppState extends State<MyApp> {
           routerConfig: AppRouter.router,
           builder: (context, child) {
             return AppUpgrader(
-              child: child ?? const SizedBox.shrink(),
+              child: ShorebirdPatchListener(
+                child: child ?? const SizedBox.shrink(),
+              ),
             );
           },
         );

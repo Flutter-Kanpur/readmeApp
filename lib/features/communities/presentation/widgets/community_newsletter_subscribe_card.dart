@@ -1,41 +1,39 @@
+import 'package:Readme/core/providers/datasource_providers.dart';
+import 'package:Readme/core/providers/supabase_providers.dart';
 import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/text_style.dart';
-import 'package:Readme/features/communities/data/datasource/community_remote_datasource.dart';
 import 'package:Readme/features/communities/data/models/community_newsletter_models.dart';
 import 'package:Readme/features/communities/domain/entities/community.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:Readme/core/network/readme_supabase.dart';
 
-class CommunityNewsletterSubscribeCard extends StatefulWidget {
+class CommunityNewsletterSubscribeCard extends ConsumerStatefulWidget {
   const CommunityNewsletterSubscribeCard({
     super.key,
     required this.community,
     required this.stats,
-    required this.datasource,
     required this.onSubscribed,
   });
 
   final Community community;
   final CommunityNewsletterStats stats;
-  final CommunityRemoteDatasource datasource;
   final VoidCallback onSubscribed;
 
   @override
-  State<CommunityNewsletterSubscribeCard> createState() =>
+  ConsumerState<CommunityNewsletterSubscribeCard> createState() =>
       _CommunityNewsletterSubscribeCardState();
 }
 
 class _CommunityNewsletterSubscribeCardState
-    extends State<CommunityNewsletterSubscribeCard> {
+    extends ConsumerState<CommunityNewsletterSubscribeCard> {
   late final TextEditingController _emailController;
   bool _isSubmitting = false;
 
   @override
   void initState() {
     super.initState();
-    final user = ReadmeSupabase.client.auth.currentUser;
+    final user = ref.read(currentUserProvider);
     _emailController = TextEditingController(text: user?.email ?? '');
   }
 
@@ -56,11 +54,13 @@ class _CommunityNewsletterSubscribeCardState
 
     setState(() => _isSubmitting = true);
     try {
-      await widget.datasource.subscribeToNewsletter(
-        communityId: widget.community.id,
-        email: email,
-        userId: ReadmeSupabase.client.auth.currentUser?.id,
-      );
+      await ref
+          .read(communityRemoteDatasourceProvider)
+          .subscribeToNewsletter(
+            communityId: widget.community.id,
+            email: email,
+            userId: ref.read(currentUserProvider)?.id,
+          );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

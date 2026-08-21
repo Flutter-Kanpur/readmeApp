@@ -1,30 +1,33 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:Readme/core/cache/blog_engagement_store.dart';
-import 'package:Readme/core/cache/blog_feed_cache.dart';
-import 'package:Readme/core/cache/blog_like_cache.dart';
 import 'package:Readme/core/config/readme_host.dart';
+import 'package:Readme/core/providers/datasource_providers.dart';
+import 'package:Readme/core/providers/supabase_providers.dart';
+import 'package:Readme/core/state/blog_engagement_provider.dart';
+import 'package:Readme/core/state/blog_feed_provider.dart';
+import 'package:Readme/core/state/blog_like_provider.dart';
 import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/app_image.dart';
 import 'package:Readme/core/utils/draft_storage.dart';
 import 'package:Readme/core/utils/text_style.dart';
+import 'package:Readme/features/profile_page/presentation/state/profile_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:Readme/core/network/readme_supabase.dart';
 
-class EditProfileScreen extends StatefulWidget {
+class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
 
   @override
-  State<EditProfileScreen> createState() => _EditProfileScreenState();
+  ConsumerState<EditProfileScreen> createState() => _EditProfileScreenState();
 }
 
-class _EditProfileScreenState extends State<EditProfileScreen> {
+class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   static const _maxImageBytes = 2 * 1024 * 1024;
 
   XFile? _imageFile;
@@ -33,7 +36,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   bool _isLoadingProfile = true;
   bool _isDeleting = false;
 
-  final supabase = ReadmeSupabase.client;
   User? _user;
   Map<String, dynamic>? _profileData;
   String _username = '';
@@ -48,7 +50,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _user = supabase.auth.currentUser;
+    _user = ref.read(currentUserProvider);
     _fetchProfile();
   }
 
@@ -58,11 +60,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (_user == null) return;
 
     try {
-      final data = await supabase
-          .from('profiles')
-          .select()
-          .eq('id', _user!.id)
-          .maybeSingle();
+      final data = await ref
+          .read(profileRemoteDatasourceProvider)
+          .fetchProfileById(_user!.id);
 
       final prefs = await SharedPreferences.getInstance();
       final socialJson = prefs.getString(_socialPrefsKey(_user!.id));
@@ -116,19 +116,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Future<String?> _uploadProfileImage() async {
     if (_imageFile == null) return null;
 
-    final user = supabase.auth.currentUser;
+    final user = ref.read(currentUserProvider);
     if (user == null) return null;
 
     try {
       final bytes = await _imageFile!.readAsBytes();
       final fileExt = _imageFile!.path.split('.').last;
-      final fileName =
-          'profile_${user.id}_${DateTime.now().millisecondsSinceEpoch}.$fileExt';
-      final filePath = 'avatars/$fileName';
-
-      await supabase.storage.from('blog_images').uploadBinary(filePath, bytes);
-
-      return supabase.storage.from('blog_images').getPublicUrl(filePath);
+      return await ref
+          .read(profileRemoteDatasourceProvider)
+          .uploadAvatar(
+            userId: user.id,
+            bytes: bytes,
+            fileExtension: fileExt,
+          );
     } catch (e) {
       debugPrint('Error uploading image: $e');
       return null;
@@ -162,7 +162,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final user = supabase.auth.currentUser;
+      final user = ref.read(currentUserProvider);
       if (user == null) {
         if (mounted) setState(() => _isLoading = false);
         return;
@@ -184,8 +184,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         updates['avatar_url'] = imageUrl;
       }
 
-      await supabase.from('profiles').update(updates).eq('id', user.id);
+      await ref
+          .read(profileRemoteDatasourceProvider)
+          .updateProfile(userId: user.id, updates: updates);
       await _saveSocialLinks(user.id);
+
+      // Reload the profile screen so it reflects the saved changes.
+      ref.invalidate(profileProvider);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -239,7 +244,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _deleteAccount() async {
-    final user = supabase.auth.currentUser;
+    final user = ref.read(currentUserProvider);
     if (user == null) {
       if (mounted) context.go('/welcome');
       return;
@@ -248,24 +253,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     setState(() => _isDeleting = true);
 
     try {
-      final response = await supabase.functions.invoke('delete-account');
-      if (response.status < 200 || response.status >= 300) {
-        final data = response.data;
-        final message = data is Map<String, dynamic>
-            ? data['error'] as String?
-            : null;
-        throw Exception(message ?? 'The server could not delete your account.');
-      }
+      await ref.read(profileRemoteDatasourceProvider).deleteAccount();
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_socialPrefsKey(user.id));
       await DraftStorage.clearDraft();
-      BlogLikeCache.instance.invalidate();
-      BlogFeedCache.instance.invalidate();
-      BlogEngagementStore.instance.invalidate();
+      ref.invalidate(blogLikeProvider);
+      ref.invalidate(blogFeedProvider);
+      ref.invalidate(blogEngagementProvider);
+      ref.invalidate(profileProvider);
 
       try {
-        await supabase.auth.signOut(scope: SignOutScope.local);
+        await ref
+            .read(supabaseClientProvider)
+            .auth
+            .signOut(scope: SignOutScope.local);
       } catch (error) {
         debugPrint('Local sign out after account deletion failed: $error');
       }

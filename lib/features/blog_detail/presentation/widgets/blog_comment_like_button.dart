@@ -1,13 +1,14 @@
-import 'package:Readme/core/network/readme_supabase.dart';
+import 'package:Readme/core/providers/datasource_providers.dart';
+import 'package:Readme/core/providers/supabase_providers.dart';
 import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/relative_time.dart';
 import 'package:Readme/core/utils/text_style.dart';
-import 'package:Readme/features/blog_detail/data/datasource/blog_comment_datasource.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
-class BlogCommentLikeButton extends StatefulWidget {
+class BlogCommentLikeButton extends ConsumerStatefulWidget {
   const BlogCommentLikeButton({
     super.key,
     required this.commentId,
@@ -22,10 +23,11 @@ class BlogCommentLikeButton extends StatefulWidget {
   final void Function(bool isLiked, int likeCount) onChanged;
 
   @override
-  State<BlogCommentLikeButton> createState() => _BlogCommentLikeButtonState();
+  ConsumerState<BlogCommentLikeButton> createState() =>
+      _BlogCommentLikeButtonState();
 }
 
-class _BlogCommentLikeButtonState extends State<BlogCommentLikeButton> {
+class _BlogCommentLikeButtonState extends ConsumerState<BlogCommentLikeButton> {
   late bool _isLiked;
   late int _likeCount;
   bool _loading = false;
@@ -56,7 +58,7 @@ class _BlogCommentLikeButtonState extends State<BlogCommentLikeButton> {
   Future<void> _toggle() async {
     if (_loading) return;
 
-    final user = ReadmeSupabase.client.auth.currentUser;
+    final user = ref.read(currentUserProvider);
     if (user == null) {
       if (mounted) context.push('/signin');
       return;
@@ -72,7 +74,7 @@ class _BlogCommentLikeButtonState extends State<BlogCommentLikeButton> {
     widget.onChanged(_isLiked, _likeCount);
 
     try {
-      final datasource = BlogCommentDatasource(ReadmeSupabase.client);
+      final datasource = ref.read(blogCommentDatasourceProvider);
       if (wasLiked) {
         await datasource.unlikeComment(
           commentId: widget.commentId,

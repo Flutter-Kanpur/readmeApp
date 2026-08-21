@@ -1,4 +1,3 @@
-import 'package:Readme/core/cache/blog_like_cache.dart';
 import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/app_image.dart';
 import 'package:Readme/core/utils/quill_content_parser.dart';
@@ -120,8 +119,6 @@ class CommunityBlogCard extends StatelessWidget {
                 BlogSupportButton(
                   blogId: article.blog.id,
                   initialLikeCount: article.blog.likeCount,
-                  initialIsLiked:
-                      BlogLikeCache.instance.isLiked(article.blog.id),
                   compact: true,
                 ),
                 SizedBox(width: 12.w),

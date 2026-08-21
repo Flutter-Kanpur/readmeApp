@@ -1,8 +1,8 @@
-import 'package:Readme/core/network/supabase_connectivity.dart';
-import 'package:Readme/core/secrets/app_secrets.dart';
 import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/text_style.dart';
+import 'package:Readme/features/auth/presentation/state/auth_controller_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -10,22 +10,20 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../shared/widgets/gradient_background.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../../shared/widgets/textfield.dart';
-import 'package:Readme/core/network/readme_supabase.dart';
 
-class ForgotPasswordScreen extends StatefulWidget {
+class ForgotPasswordScreen extends ConsumerStatefulWidget {
   const ForgotPasswordScreen({super.key, this.initialEmail});
 
   final String? initialEmail;
 
   @override
-  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
+  ConsumerState<ForgotPasswordScreen> createState() =>
+      _ForgotPasswordScreenState();
 }
 
-class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
+class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   late final TextEditingController _emailController;
-  bool _loading = false;
   bool _emailSent = false;
-  final _supabase = ReadmeSupabase.client;
 
   @override
   void initState() {
@@ -69,7 +67,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   Future<void> _sendResetLink() async {
-    if (_loading) return;
+    if (ref.read(authControllerProvider).isLoading) return;
 
     final email = _emailController.text.trim();
     if (email.isEmpty) {
@@ -92,10 +90,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       return;
     }
 
-    setState(() => _loading = true);
-
     try {
-      final reachable = await SupabaseConnectivity.canReachServer();
+      final reachable = await ref
+          .read(authControllerProvider.notifier)
+          .sendPasswordReset(email);
       if (!mounted) return;
       if (!reachable) {
         _showSnackBar(
@@ -110,12 +108,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         return;
       }
 
-      await _supabase.auth.resetPasswordForEmail(
-        email,
-        redirectTo: AppSecrets.authCallbackUrl,
-      );
-
-      if (!mounted) return;
       setState(() => _emailSent = true);
       _showSnackBar(
         const SnackBar(
@@ -140,8 +132,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           backgroundColor: Colors.red,
         ),
       );
-    } finally {
-      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -201,7 +191,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       ),
                       SizedBox(height: 24.h),
                       PrimaryButton(
-                        loading: _loading,
+                        loading: ref.watch(authControllerProvider).isLoading,
                         text: _emailSent ? 'Resend link' : 'Send reset link',
                         onPressed: _sendResetLink,
                       ),

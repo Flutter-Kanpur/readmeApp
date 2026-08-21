@@ -1,15 +1,12 @@
-import 'dart:async';
-
-import 'package:Readme/core/cache/blog_feed_cache.dart';
-import 'package:Readme/core/network/readme_supabase.dart';
+import 'package:Readme/core/providers/supabase_providers.dart';
 import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/assets_path.dart';
-import 'package:Readme/core/utils/draft_storage.dart';
 import 'package:Readme/core/utils/quill_content_parser.dart';
 import 'package:Readme/core/utils/text_style.dart';
-import 'package:Readme/features/create_blog_page/data/datasource/blog_draft_datasource.dart';
 import 'package:Readme/features/create_blog_page/domain/entities/blog_draft.dart';
+import 'package:Readme/features/create_blog_page/presentation/state/drafts_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -17,90 +14,50 @@ import 'package:intl/intl.dart';
 import 'package:lottie/lottie.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-class MyDraftsScreen extends StatefulWidget {
+class MyDraftsScreen extends ConsumerStatefulWidget {
   const MyDraftsScreen({super.key});
 
   @override
-  State<MyDraftsScreen> createState() => _MyDraftsScreenState();
+  ConsumerState<MyDraftsScreen> createState() => _MyDraftsScreenState();
 }
 
-class _MyDraftsScreenState extends State<MyDraftsScreen> {
-  final _datasource = BlogDraftDatasource(ReadmeSupabase.client);
-
-  bool _isLoading = true;
-  List<BlogDraft> _drafts = [];
-  String? _error;
-  StreamSubscription<AuthState>? _authSub;
+class _MyDraftsScreenState extends ConsumerState<MyDraftsScreen> {
   bool _tabTickerEnabled = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _authSub = ReadmeSupabase.client.auth.onAuthStateChange.listen((_) {
-      if (mounted) _loadDrafts();
-    });
-    _loadDrafts();
-  }
-
-  @override
-  void dispose() {
-    _authSub?.cancel();
-    super.dispose();
-  }
+  bool _dependenciesInitialized = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final tickerEnabled = TickerMode.of(context);
+    final tickerEnabled = TickerMode.valuesOf(context).enabled;
+
+    // The first pass just records the ticker state — draftsProvider.build()
+    // already performs the initial load, so invalidating here would double-fetch.
+    if (!_dependenciesInitialized) {
+      _dependenciesInitialized = true;
+      _tabTickerEnabled = tickerEnabled;
+      return;
+    }
+
+    // Reload when the drafts tab is re-selected (ticker goes off → on) so it
+    // picks up drafts created or deleted from elsewhere.
     if (tickerEnabled && !_tabTickerEnabled) {
       _tabTickerEnabled = true;
-      _loadDrafts();
+      ref.invalidate(draftsProvider);
     } else if (!tickerEnabled) {
       _tabTickerEnabled = false;
     }
   }
 
-  Future<void> _loadDrafts() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-
-    final user = ReadmeSupabase.client.auth.currentUser;
-    if (user == null) {
-      if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-        _drafts = [];
-      });
-      return;
-    }
-
-    try {
-      final drafts = await _datasource.fetchAllDrafts(user.id);
-      if (!mounted) return;
-      setState(() {
-        _drafts = drafts;
-        _isLoading = false;
-      });
-    } catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _error = 'Could not load drafts. Pull to refresh.';
-        _isLoading = false;
-      });
-      debugPrint('fetchAllDrafts error: $error');
-    }
-  }
+  Future<void> _reload() => ref.read(draftsProvider.notifier).refresh();
 
   Future<void> _openNewDraft() async {
-    final user = ReadmeSupabase.client.auth.currentUser;
+    final user = ref.read(currentUserProvider);
     if (user == null) {
       context.push('/signin');
       return;
     }
     await context.push('/create');
-    if (mounted) _loadDrafts();
+    if (mounted) _reload();
   }
 
   Future<void> _openEdit(BlogDraft draft) async {
@@ -109,11 +66,11 @@ class _MyDraftsScreenState extends State<MyDraftsScreen> {
     } else {
       await context.push('/edit/${draft.id}');
     }
-    if (mounted) _loadDrafts();
+    if (mounted) _reload();
   }
 
   Future<void> _publishDraft(BlogDraft draft) async {
-    final user = ReadmeSupabase.client.auth.currentUser;
+    final user = ref.read(currentUserProvider);
     if (user == null) {
       context.push('/signin');
       return;
@@ -125,7 +82,7 @@ class _MyDraftsScreenState extends State<MyDraftsScreen> {
           const SnackBar(content: Text('Add a title in the editor, then save')),
         );
         await context.push('/create');
-        if (mounted) _loadDrafts();
+        if (mounted) _reload();
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
@@ -134,7 +91,7 @@ class _MyDraftsScreenState extends State<MyDraftsScreen> {
         ),
       );
       await context.push('/create');
-      if (mounted) _loadDrafts();
+      if (mounted) _reload();
       return;
     }
 
@@ -160,13 +117,11 @@ class _MyDraftsScreenState extends State<MyDraftsScreen> {
     if (confirmed != true || !mounted) return;
 
     try {
-      await _datasource.publishDraft(blogId: draft.id, userId: user.id);
-      BlogFeedCache.instance.invalidate();
+      await ref.read(draftsProvider.notifier).publish(draft.id);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Draft published successfully')),
       );
-      _loadDrafts();
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -198,13 +153,11 @@ class _MyDraftsScreenState extends State<MyDraftsScreen> {
         ),
       );
       if (confirmed != true || !mounted) return;
-      await DraftStorage.clearDraft();
-      if (!mounted) return;
-      setState(() => _drafts.removeWhere((d) => d.isLocalOnly));
+      await ref.read(draftsProvider.notifier).clearLocalDraft();
       return;
     }
 
-    final user = ReadmeSupabase.client.auth.currentUser;
+    final user = ref.read(currentUserProvider);
     if (user == null) {
       context.push('/signin');
       return;
@@ -233,9 +186,7 @@ class _MyDraftsScreenState extends State<MyDraftsScreen> {
     if (confirmed != true || !mounted) return;
 
     try {
-      await _datasource.deleteDraft(blogId: draft.id, userId: user.id);
-      if (!mounted) return;
-      setState(() => _drafts.removeWhere((d) => d.id == draft.id));
+      await ref.read(draftsProvider.notifier).delete(draft.id);
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -246,7 +197,8 @@ class _MyDraftsScreenState extends State<MyDraftsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = ReadmeSupabase.client.auth.currentUser;
+    final user = ref.watch(currentUserProvider);
+    final draftsAsync = ref.watch(draftsProvider);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -258,8 +210,8 @@ class _MyDraftsScreenState extends State<MyDraftsScreen> {
             Divider(height: 1, color: Colors.grey.shade200),
             Expanded(
               child: RefreshIndicator(
-                onRefresh: _loadDrafts,
-                child: _buildBody(user),
+                onRefresh: _reload,
+                child: _buildBody(user, draftsAsync),
               ),
             ),
           ],
@@ -268,7 +220,7 @@ class _MyDraftsScreenState extends State<MyDraftsScreen> {
     );
   }
 
-  Widget _buildBody(user) {
+  Widget _buildBody(User? user, AsyncValue<List<BlogDraft>> draftsAsync) {
     if (user == null) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -293,7 +245,9 @@ class _MyDraftsScreenState extends State<MyDraftsScreen> {
       );
     }
 
-    if (_isLoading) {
+    final drafts = draftsAsync.value;
+
+    if (draftsAsync.isLoading && drafts == null) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.fromLTRB(20.w, 24.h, 20.w, 24.h),
@@ -304,19 +258,23 @@ class _MyDraftsScreenState extends State<MyDraftsScreen> {
       );
     }
 
-    if (_error != null) {
+    if (draftsAsync.hasError && drafts == null) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
           SizedBox(height: 80.h),
           Center(
-            child: Text(_error!, style: textStyle_14RegularGrey()),
+            child: Text(
+              'Could not load drafts. Pull to refresh.',
+              style: textStyle_14RegularGrey(),
+            ),
           ),
         ],
       );
     }
 
-    if (_drafts.isEmpty) {
+    final items = drafts ?? const <BlogDraft>[];
+    if (items.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
@@ -331,10 +289,10 @@ class _MyDraftsScreenState extends State<MyDraftsScreen> {
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.fromLTRB(20.w, 24.h, 20.w, 32.h),
-      itemCount: _drafts.length,
-      separatorBuilder: (_, __) => SizedBox(height: 16.h),
+      itemCount: items.length,
+      separatorBuilder: (_, _) => SizedBox(height: 16.h),
       itemBuilder: (context, index) {
-        final draft = _drafts[index];
+        final draft = items[index];
         return _DraftCard(
           draft: draft,
           onEdit: () => _openEdit(draft),

@@ -1,121 +1,56 @@
-import 'package:Readme/core/cache/blog_engagement_store.dart';
-import 'package:Readme/core/cache/blog_feed_cache.dart';
-import 'package:Readme/core/cache/blog_like_cache.dart';
+import 'package:Readme/core/state/blog_engagement_provider.dart';
+import 'package:Readme/core/state/blog_feed_provider.dart';
+import 'package:Readme/core/state/blog_like_provider.dart';
 import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/text_style.dart';
-import 'package:Readme/features/blog_detail/data/datasource/blog_like_datasource.dart';
-import 'package:Readme/features/home_page/data/datasource/blog_remote_datasource.dart';
+import 'package:Readme/features/home_page/domain/entities/blog.dart';
 import 'package:Readme/features/home_page/presentation/state/article_category_filters.dart';
 import 'package:Readme/features/home_page/presentation/widgets/blog_card.dart';
 import 'package:Readme/features/home_page/presentation/widgets/blog_card_shimmer.dart';
 import 'package:Readme/features/search/data/models/explore_article_model.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../shared/widgets/category_filter_bottom_sheet.dart';
 import '../../../../shared/widgets/gradient_background.dart';
-import 'package:Readme/core/network/readme_supabase.dart';
 
-class SearchScreen extends StatefulWidget {
+class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
 
   @override
-  State<SearchScreen> createState() => _SearchScreenState();
+  ConsumerState<SearchScreen> createState() => _SearchScreenState();
 }
 
-class _SearchScreenState extends State<SearchScreen> {
-  late final BlogRemoteDatasource _datasource;
-
-  List<ExploreArticle> _articles = [];
+class _SearchScreenState extends ConsumerState<SearchScreen> {
   ArticleCategoryFilter _selectedFilter = ArticleCategoryFilter.forYou;
-  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _datasource = BlogRemoteDatasource(ReadmeSupabase.client);
-    _loadArticles();
+    // Reuses the shared feed provider (same blogs as Home); only refetch when
+    // the cached list is stale.
+    ref.read(blogFeedProvider.notifier).refreshIfStale();
   }
 
-  List<ExploreArticle> _articlesFromCache() {
-    final blogs = BlogFeedCache.instance.blogs;
-    if (blogs == null) return [];
+  Future<void> _refresh() => ref.read(blogFeedProvider.notifier).refresh();
 
-    return blogs
-        .map(
-          (blog) => ExploreArticle(
-            blog: blog,
-            authors: blog.allAuthors,
-            communityName: blog.communityName,
-            communityLogoUrl: blog.communityLogoUrl,
-          ),
-        )
-        .toList();
+  Future<void> _preloadLikeState(List<Blog> blogs) async {
+    if (blogs.isEmpty) return;
+    await ref
+        .read(blogLikeProvider.notifier)
+        .preload(blogs.map((blog) => blog.id).toList());
   }
 
-  Future<void> _loadArticles({bool forceRefresh = false}) async {
-    if (!mounted) return;
+  ExploreArticle _toArticle(Blog blog) => ExploreArticle(
+    blog: blog,
+    authors: blog.allAuthors,
+    communityName: blog.communityName,
+    communityLogoUrl: blog.communityLogoUrl,
+  );
 
-    if (!forceRefresh && BlogFeedCache.instance.isFresh) {
-      final cachedArticles = _articlesFromCache();
-      BlogEngagementStore.instance.seedAll(
-        cachedArticles.map((a) => a.blog),
-      );
-      setState(() {
-        _articles = cachedArticles;
-        _isLoading = false;
-      });
-      await _preloadLikeState(cachedArticles);
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    try {
-      final blogs = await BlogFeedCache.instance.load(
-        () async => (await _datasource.fetchExploreArticles())
-            .map((article) => article.blog)
-            .toList(),
-      );
-      final articles = blogs
-          .map(
-            (blog) => ExploreArticle(
-              blog: blog,
-              authors: blog.allAuthors,
-              communityName: blog.communityName,
-              communityLogoUrl: blog.communityLogoUrl,
-            ),
-          )
-          .toList();
-      if (!mounted) return;
-      BlogEngagementStore.instance.seedAll(blogs);
-      setState(() {
-        _articles = articles;
-        _isLoading = false;
-      });
-      await _preloadLikeState(articles);
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _preloadLikeState(List<ExploreArticle> articles) async {
-    final user = ReadmeSupabase.client.auth.currentUser;
-    if (user == null || articles.isEmpty || !mounted) return;
-
-    await BlogLikeCache.instance.preload(
-      userId: user.id,
-      blogIds: articles.map((article) => article.blog.id).toList(),
-      datasource: BlogLikeDatasource(ReadmeSupabase.client),
-    );
-
-    if (mounted) setState(() {});
-  }
-
-  List<ExploreArticle> get _filteredArticles {
-    return _articles.where((article) {
+  List<ExploreArticle> _filtered(List<ExploreArticle> articles) {
+    return articles.where((article) {
       if (_selectedFilter.communitiesOnly) {
         return article.communityName != null &&
             article.communityName!.trim().isNotEmpty;
@@ -140,12 +75,24 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<AsyncValue<List<Blog>>>(blogFeedProvider, (prev, next) {
+      final blogs = next.value;
+      if (blogs == null || identical(prev?.value, blogs)) return;
+      ref.read(blogEngagementProvider.notifier).seedAll(blogs);
+      _preloadLikeState(blogs);
+    });
+
+    final feedState = ref.watch(blogFeedProvider);
+    final blogs = feedState.value ?? const <Blog>[];
+    final isLoading = feedState.isLoading && !feedState.hasValue;
+    final filteredArticles = _filtered(blogs.map(_toArticle).toList());
+
     return GradientBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: SafeArea(
           child: RefreshIndicator(
-            onRefresh: () => _loadArticles(forceRefresh: true),
+            onRefresh: _refresh,
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(
                 parent: BouncingScrollPhysics(),
@@ -211,7 +158,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     ),
                   ),
                 ),
-                if (_isLoading)
+                if (isLoading)
                   SliverPadding(
                     padding: EdgeInsets.symmetric(horizontal: 20.w),
                     sliver: SliverList.separated(
@@ -220,7 +167,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       itemBuilder: (_, __) => const BlogCardShimmer(),
                     ),
                   )
-                else if (_filteredArticles.isEmpty)
+                else if (filteredArticles.isEmpty)
                   SliverFillRemaining(
                     hasScrollBody: false,
                     child: Center(
@@ -236,12 +183,10 @@ class _SearchScreenState extends State<SearchScreen> {
                   SliverPadding(
                     padding: EdgeInsets.fromLTRB(20.w, 0, 20.w, 100.h),
                     sliver: SliverList.separated(
-                      itemCount: _filteredArticles.length,
+                      itemCount: filteredArticles.length,
                       separatorBuilder: (_, __) => SizedBox(height: 16.h),
                       itemBuilder: (context, index) {
-                        return BlogCard(
-                          blog: _filteredArticles[index].blog,
-                        );
+                        return BlogCard(blog: filteredArticles[index].blog);
                       },
                     ),
                   ),

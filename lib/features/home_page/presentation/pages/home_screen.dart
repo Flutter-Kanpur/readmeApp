@@ -1,18 +1,13 @@
-import 'package:Readme/core/cache/blog_engagement_store.dart';
-import 'package:Readme/core/cache/blog_feed_cache.dart';
-import 'package:Readme/core/cache/blog_like_cache.dart';
-import 'package:Readme/core/utils/text_style.dart';
-import 'package:Readme/features/blog_detail/data/datasource/blog_like_datasource.dart';
+import 'package:Readme/core/state/blog_engagement_provider.dart';
+import 'package:Readme/core/state/blog_feed_provider.dart';
+import 'package:Readme/core/state/blog_like_provider.dart';
 import 'package:Readme/features/home_page/domain/entities/blog.dart';
 import 'package:Readme/features/home_page/presentation/state/article_category_filters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:Readme/features/home_page/data/datasource/blog_remote_datasource.dart';
 import 'package:go_router/go_router.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:Readme/features/home_page/data/repositories/blog_repository_impl.dart';
-import 'package:Readme/features/home_page/domain/repositories/blog_repository.dart';
 import 'package:Readme/features/home_page/presentation/widgets/blog_card.dart';
 import 'package:Readme/features/home_page/presentation/widgets/blog_card_shimmer.dart';
 import 'package:Readme/features/home_page/presentation/widgets/home_articles_section.dart';
@@ -20,111 +15,44 @@ import 'package:Readme/features/home_page/presentation/widgets/home_hero_section
 
 import '../../../../shared/widgets/category_filter_bottom_sheet.dart';
 import '../../../../shared/widgets/gradient_background.dart';
-import 'package:Readme/core/network/readme_supabase.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  late final BlogRepository blogRepository;
+class _HomeScreenState extends ConsumerState<HomeScreen> {
   final ScrollController _scrollController = ScrollController();
 
-  List<Blog> allBlogs = [];
   ArticleCategoryFilter _selectedFilter = ArticleCategoryFilter.forYou;
-  bool _isLoadingBlogs = true;
-  double _scrollOffset = 0;
-
-  static const double _statusBarFadeDistance = 72;
 
   @override
   void initState() {
     super.initState();
-
-    blogRepository = BlogRepositoryImpl(
-      BlogRemoteDatasource(ReadmeSupabase.client),
-    );
-
-    _scrollController.addListener(_onScroll);
-    _loadBlogs();
+    // The feed is a shared, non-autoDispose provider: only refetch if the
+    // cached list has gone stale (5-min TTL), otherwise reuse it.
+    ref.read(blogFeedProvider.notifier).refreshIfStale();
   }
 
   @override
   void dispose() {
-    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
   }
 
-  void _onScroll() {
-    final offset = _scrollController.hasClients
-        ? _scrollController.offset
-        : 0.0;
-    if ((offset - _scrollOffset).abs() < 0.5) return;
-    setState(() => _scrollOffset = offset);
-  }
-
-  double get _statusBarBlend =>
-      (_scrollOffset / _statusBarFadeDistance).clamp(0.0, 1.0);
-
-  Future<void> _refreshBlogs() async {
-    BlogFeedCache.instance.invalidate();
-    await _loadBlogs(forceRefresh: true, showSpinner: false);
-  }
-
-  Future<void> _loadBlogs({
-    bool forceRefresh = false,
-    bool showSpinner = true,
-  }) async {
-    if (!mounted) return;
-
-    if (!forceRefresh && BlogFeedCache.instance.isFresh) {
-      final cached = BlogFeedCache.instance.blogs!;
-      BlogEngagementStore.instance.seedAll(cached);
-      setState(() {
-        allBlogs = cached;
-        _selectedFilter = ArticleCategoryFilter.forYou;
-        _isLoadingBlogs = false;
-      });
-      await _preloadLikeState(cached);
-      return;
-    }
-
-    if (showSpinner) setState(() => _isLoadingBlogs = true);
-
-    try {
-      final blogs = await BlogFeedCache.instance.load(blogRepository.getBlogs);
-      if (!mounted) return;
-      BlogEngagementStore.instance.seedAll(blogs);
-      setState(() {
-        allBlogs = blogs;
-        _selectedFilter = ArticleCategoryFilter.forYou;
-        _isLoadingBlogs = false;
-      });
-      await _preloadLikeState(blogs);
-    } catch (_) {
-      if (mounted) setState(() => _isLoadingBlogs = false);
-    }
-  }
+  Future<void> _refreshBlogs() => ref.read(blogFeedProvider.notifier).refresh();
 
   Future<void> _preloadLikeState(List<Blog> blogs) async {
-    final user = ReadmeSupabase.client.auth.currentUser;
-    if (user == null || blogs.isEmpty || !mounted) return;
-
-    await BlogLikeCache.instance.preload(
-      userId: user.id,
-      blogIds: blogs.map((blog) => blog.id).toList(),
-      datasource: BlogLikeDatasource(ReadmeSupabase.client),
-    );
-
-    if (mounted) setState(() {});
+    if (blogs.isEmpty) return;
+    await ref
+        .read(blogLikeProvider.notifier)
+        .preload(blogs.map((blog) => blog.id).toList());
   }
 
-  List<Blog> get filteredBlogs {
-    return allBlogs
+  List<Blog> _filtered(List<Blog> blogs) {
+    return blogs
         .where(
           (blog) => matchesArticleCategoryFilter(
             blogCategory: blog.category,
@@ -147,6 +75,21 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Seed engagement counts + preload liked-state whenever the shared feed
+    // yields a new list (initial fetch or pull-to-refresh). The providers are
+    // persistent stores, so cards on other screens stay in sync.
+    ref.listen<AsyncValue<List<Blog>>>(blogFeedProvider, (prev, next) {
+      final blogs = next.value;
+      if (blogs == null || identical(prev?.value, blogs)) return;
+      ref.read(blogEngagementProvider.notifier).seedAll(blogs);
+      _preloadLikeState(blogs);
+    });
+
+    final feedState = ref.watch(blogFeedProvider);
+    final blogs = feedState.value ?? const <Blog>[];
+    final isLoadingBlogs = feedState.isLoading && !feedState.hasValue;
+    final filteredBlogs = _filtered(blogs);
+
     final topInset = MediaQuery.paddingOf(context).top;
     // final blend = _statusBarBlend;
     final statusBarStyle = SystemUiOverlayStyle(
@@ -160,33 +103,6 @@ class _HomeScreenState extends State<HomeScreen> {
       child: GradientBackground(
         child: Scaffold(
           backgroundColor: Colors.transparent,
-          // appBar: AppBar(
-          //   forceMaterialTransparency: true,
-          //   automaticallyImplyLeading: false,
-          //   backgroundColor: Colors.transparent,
-          //   title: Padding(
-          //     padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          //     child: Row(
-          //       children: [
-          //         ClipRRect(
-          //             borderRadius: BorderRadius.circular(5),
-          //             child: Container(
-          //                 color: Colors.black,
-          //                 height: 30.h,
-          //                 width: 30.w,
-          //                 child: Padding(
-          //                   padding: const EdgeInsets.all(4.0),
-          //                   child: SvgPicture.asset("assets/icons/logo.svg"),
-          //                 ))),
-          //         10.horizontalSpace,
-          //         Text("Readme", style: textStyle_24BoldBlack().copyWith(
-          //           fontSize: 20.sp,
-          //           fontWeight: FontWeight.w700,
-          //         )),
-          //       ],
-          //     ),
-          //   ),
-          // ),
           extendBody: true,
           extendBodyBehindAppBar: true,
           body: Stack(
@@ -225,7 +141,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             hasActiveFilter: !_selectedFilter.isForYou,
                           ),
                         ),
-                        if (_isLoadingBlogs)
+                        if (isLoadingBlogs)
                           SliverList.separated(
                             itemCount: 5,
                             separatorBuilder: (_, __) => SizedBox(height: 16.h),

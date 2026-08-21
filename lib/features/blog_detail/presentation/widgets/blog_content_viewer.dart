@@ -10,7 +10,6 @@ import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:markdown/markdown.dart' as md;
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:Readme/core/network/readme_supabase.dart';
 
 class BlogContentViewer extends StatefulWidget {
@@ -73,16 +72,6 @@ class _BlogContentViewerState extends State<BlogContentViewer> {
     return ReadmeSupabase.client.storage
         .from('blog_images')
         .getPublicUrl(path);
-  }
-
-  String? _resolveImageSrc(String? src) {
-    if (src == null || src.isEmpty) return null;
-    final resolved = resolveInlineImageSource(
-      src,
-      imageUrls: widget.imageUrls,
-      storagePathToUrl: _storagePublicUrl,
-    );
-    return resolved.isEmpty ? null : resolved;
   }
 
   void _initQuillControllerIfNeeded() {
@@ -208,7 +197,6 @@ class _BlogContentViewerState extends State<BlogContentViewer> {
     );
     if (blocks.isEmpty) return const SizedBox.shrink();
 
-    final serifFamily = GoogleFonts.lora().fontFamily;
     final sansFamily = 'ProductSans';
     final htmlStyles = {
       'body': Style(

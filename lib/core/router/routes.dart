@@ -20,10 +20,30 @@ import 'package:Readme/features/legal/presentation/pages/privacy_policy_screen.d
 import 'package:Readme/core/deep_links/article_deep_link.dart';
 import 'package:Readme/features/blog_detail/presentation/pages/blog_detail_loader.dart';
 import 'package:Readme/features/home_page/domain/entities/blog.dart';
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:Readme/core/network/readme_supabase.dart';
+
+/// Bridges an auth [Stream] to a [Listenable] so go_router re-evaluates
+/// `redirect` on sign-in / sign-out. The redirect itself still reads
+/// `ReadmeSupabase.client.auth.currentUser` (it runs outside the widget tree).
+class GoRouterRefreshStream extends ChangeNotifier {
+  GoRouterRefreshStream(Stream<dynamic> stream) {
+    _subscription = stream
+        .asBroadcastStream()
+        .listen((_) => notifyListeners());
+  }
+
+  late final StreamSubscription<dynamic> _subscription;
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
+}
 
 CustomTransitionPage<void> _fadeSlideTransitionPage({
   required LocalKey key,
@@ -61,6 +81,9 @@ class AppRouter {
   static final GoRouter router = GoRouter(
     navigatorKey: rootNavigatorKey,
     initialLocation: '/',
+    refreshListenable: GoRouterRefreshStream(
+      ReadmeSupabase.client.auth.onAuthStateChange,
+    ),
     redirect: (context, state) {
       // Platform deep links arrive as /blogs/articles/:id (website path).
       final articleRoute = ArticleDeepLink.routeFor(state.uri);
@@ -185,8 +208,7 @@ class AppRouter {
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) {
           final slug = state.pathParameters['slug']!;
-          final community = state.extra as Community?;
-          return CommunityDetailScreen(slug: slug, community: community);
+          return CommunityDetailScreen(slug: slug);
         },
       ),
       StatefulShellRoute.indexedStack(

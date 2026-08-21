@@ -1,30 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:Readme/core/network/supabase_connectivity.dart';
 import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/assets_path.dart';
 import 'package:Readme/core/utils/text_style.dart';
+import 'package:Readme/features/auth/presentation/state/auth_controller_provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../shared/widgets/gradient_background.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../../shared/widgets/textfield.dart';
-import 'package:Readme/core/network/readme_supabase.dart';
 
-class SignUpScreen extends StatefulWidget {
+class SignUpScreen extends ConsumerStatefulWidget {
   const SignUpScreen({super.key});
 
   @override
-  State<SignUpScreen> createState() => _SignUpScreenState();
+  ConsumerState<SignUpScreen> createState() => _SignUpScreenState();
 }
 
-class _SignUpScreenState extends State<SignUpScreen> {
+class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   late TextEditingController _usernameController;
   late TextEditingController _emailController;
   late TextEditingController _passwordController;
   late TextEditingController _confirmPasswordController;
-  bool loading = false;
-  final supabase = ReadmeSupabase.client;
 
   void _showSnackBar(SnackBar snackBar) {
     if (!mounted) return;
@@ -92,23 +90,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return 'Something went wrong. Please try again.';
   }
 
-  Future<void> _syncProfileAfterSignUp({
-    required String userId,
-    required String username,
-  }) async {
-    try {
-      await supabase.from('profiles').upsert({
-        'id': userId,
-        'name': username,
-        'username': username,
-      });
-    } catch (e) {
-      debugPrint('Profile sync after sign-up failed: $e');
-    }
-  }
-
   Future<void> createAccount() async {
-    if (loading) return;
+    if (ref.read(authControllerProvider).isLoading) return;
 
     final validationError = _validateForm();
     if (validationError != null) {
@@ -121,14 +104,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
       return;
     }
 
-    setState(() {
-      loading = true;
-    });
+    final username = _usernameController.text.trim();
+    final email = _emailController.text.trim();
 
     try {
-      final reachable = await SupabaseConnectivity.canReachServer();
+      final outcome = await ref.read(authControllerProvider.notifier).signUp(
+            email: email,
+            password: _passwordController.text,
+            username: username,
+          );
+
       if (!mounted) return;
-      if (!reachable) {
+
+      // A null outcome means Supabase was unreachable (connectivity probe
+      // failed inside the controller) — show the emulator/Wi‑Fi hint.
+      if (outcome == null) {
         _showSnackBar(
           const SnackBar(
             content: Text(
@@ -142,67 +132,37 @@ class _SignUpScreenState extends State<SignUpScreen> {
         return;
       }
 
-      final username = _usernameController.text.trim();
-      final email = _emailController.text.trim();
-
-      final result = await supabase.auth.signUp(
-        email: email,
-        password: _passwordController.text,
-        data: {
-          'username': username,
-          'name': username,
-          'full_name': username,
-        },
-      );
-
-      if (!mounted) return;
-
-      // Supabase may return a user with no identities when the email
-      // is already registered (instead of throwing AuthException).
-      final identities = result.user?.identities;
-      if (result.user != null && (identities == null || identities.isEmpty)) {
-        _showSnackBar(
-          const SnackBar(
-            content: Text(
-              'An account with this email already exists. Try logging in.',
+      switch (outcome) {
+        case SignUpOutcome.alreadyRegistered:
+          _showSnackBar(
+            const SnackBar(
+              content: Text(
+                'An account with this email already exists. Try logging in.',
+              ),
+              backgroundColor: Colors.red,
             ),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
+          );
+        case SignUpOutcome.sessionCreated:
+          _showSnackBar(
+            const SnackBar(
+              content: Text('Account created successfully!'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+          context.go('/home');
+        case SignUpOutcome.needsEmailConfirmation:
+          _showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Account created! Check your email to confirm, then log in.',
+              ),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 4),
+            ),
+          );
+          context.go('/signin');
       }
-
-      if (result.user != null) {
-        await _syncProfileAfterSignUp(
-          userId: result.user!.id,
-          username: username,
-        );
-      }
-
-      if (!mounted) return;
-
-      if (result.session != null) {
-        _showSnackBar(
-          const SnackBar(
-            content: Text('Account created successfully!'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
-          ),
-        );
-        context.go('/home');
-        return;
-      }
-
-      _showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Account created! Check your email to confirm, then log in.',
-          ),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 4),
-        ),
-      );
-      context.go('/signin');
     } on AuthException catch (e) {
       _showSnackBar(
         SnackBar(
@@ -218,12 +178,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
         ),
       );
       debugPrint(e.toString());
-    } finally {
-      if (mounted) {
-        setState(() {
-          loading = false;
-        });
-      }
     }
   }
 
@@ -348,7 +302,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   Widget _buildCreateAccountButton() {
     return PrimaryButton(
-      loading: loading,
+      loading: ref.watch(authControllerProvider).isLoading,
       text: 'Create account',
       onPressed: createAccount,
     );

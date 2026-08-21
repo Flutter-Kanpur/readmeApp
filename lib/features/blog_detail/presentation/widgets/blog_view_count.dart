@@ -1,14 +1,15 @@
-import 'package:Readme/core/cache/blog_engagement_store.dart';
+import 'package:Readme/core/state/blog_engagement_provider.dart';
 import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/text_style.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 /// Displays how many times an article has been viewed / read.
 ///
-/// When [blogId] is set, prefers the session [BlogEngagementStore] so list and
-/// detail stay aligned after a view is recorded.
-class BlogViewCount extends StatelessWidget {
+/// When [blogId] is set, prefers the session [blogEngagementProvider] so list
+/// and detail stay aligned after a view is recorded.
+class BlogViewCount extends ConsumerWidget {
   const BlogViewCount({
     super.key,
     required this.count,
@@ -31,22 +32,16 @@ class BlogViewCount extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final id = blogId;
     if (id == null) {
       return _buildRow(count);
     }
 
-    return ListenableBuilder(
-      listenable: BlogEngagementStore.instance,
-      builder: (context, _) {
-        final resolved = BlogEngagementStore.instance.viewCount(
-          id,
-          fallback: count,
-        );
-        return _buildRow(resolved);
-      },
+    final resolved = ref.watch(
+      blogEngagementProvider.select((m) => m[id]?.viewCount ?? count),
     );
+    return _buildRow(resolved);
   }
 
   Widget _buildRow(int resolvedCount) {
@@ -64,9 +59,7 @@ class BlogViewCount extends StatelessWidget {
         ),
         SizedBox(width: 6.w),
         Text(
-          compact
-              ? label
-              : '$label ${resolvedCount == 1 ? 'view' : 'views'}',
+          compact ? label : '$label ${resolvedCount == 1 ? 'view' : 'views'}',
           style: textStyle_12RegularGrey().copyWith(
             fontSize: fontSize,
             fontWeight: FontWeight.w600,

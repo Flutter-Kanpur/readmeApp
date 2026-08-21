@@ -1,223 +1,173 @@
-import 'package:Readme/core/cache/blog_engagement_store.dart';
-import 'package:Readme/core/cache/blog_like_cache.dart';
+import 'package:Readme/core/providers/supabase_providers.dart';
+import 'package:Readme/core/state/blog_engagement_provider.dart';
+import 'package:Readme/core/state/blog_like_provider.dart';
 import 'package:Readme/core/utils/app_colors.dart';
-import 'package:Readme/features/blog_detail/data/datasource/blog_like_datasource.dart';
 import 'package:Readme/core/utils/app_image.dart';
 import 'package:Readme/core/utils/text_style.dart';
-import 'package:Readme/features/communities/data/datasource/community_remote_datasource.dart';
 import 'package:Readme/features/communities/data/models/community_article_model.dart';
-import 'package:Readme/features/communities/data/models/community_newsletter_models.dart';
-import 'package:Readme/features/communities/domain/entities/community.dart';
+import 'package:Readme/features/communities/presentation/state/community_detail_provider.dart';
 import 'package:Readme/features/communities/presentation/widgets/community_blog_card.dart';
 import 'package:Readme/features/communities/presentation/widgets/community_detail_shimmer.dart';
 import 'package:Readme/features/communities/presentation/widgets/community_newsletter_subscribe_card.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:Readme/core/network/readme_supabase.dart';
 
-class CommunityDetailScreen extends StatefulWidget {
-  const CommunityDetailScreen({super.key, required this.slug, this.community});
+class CommunityDetailScreen extends ConsumerStatefulWidget {
+  const CommunityDetailScreen({super.key, required this.slug});
 
   final String slug;
-  final Community? community;
 
   @override
-  State<CommunityDetailScreen> createState() => _CommunityDetailScreenState();
+  ConsumerState<CommunityDetailScreen> createState() =>
+      _CommunityDetailScreenState();
 }
 
-class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
-  late final CommunityRemoteDatasource _datasource;
-
-  Community? _community;
-  CommunityStats? _stats;
-  List<CommunityArticle> _articles = [];
-  bool _isMember = false;
-  String? _userRole;
-  bool _isFollowing = false;
+class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
   bool _followActionLoading = false;
-  bool _followAvailable = true;
-  bool _isLoading = true;
-  String? _error;
-  CommunityNewsletterStats? _newsletterStats;
 
-  @override
-  void initState() {
-    super.initState();
-    _datasource = CommunityRemoteDatasource(ReadmeSupabase.client);
-    _community = widget.community;
-    _loadDetail();
-  }
+  String get _slug => widget.slug;
 
-  Future<void> _loadDetail() async {
-    if (!mounted) return;
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+  Future<void> _onFollowTap() async {
+    if (_followActionLoading) return;
 
+    final user = ref.read(currentUserProvider);
+    if (user == null) {
+      context.push('/signin');
+      return;
+    }
+
+    setState(() => _followActionLoading = true);
     try {
-      final community =
-          _community ?? await _datasource.fetchCommunityBySlug(widget.slug);
-
-      if (community == null) {
-        if (!mounted) return;
-        setState(() {
-          _error = 'Community not found';
-          _isLoading = false;
-        });
-        return;
-      }
-
-      final stats = await _datasource.fetchCommunityStats(community.id);
-      final articles = await _datasource.fetchCommunityArticles(community.id);
-
-      final user = ReadmeSupabase.client.auth.currentUser;
-      final userId = user?.id;
-      var isMember = false;
-      String? userRole;
-      var isFollowing = false;
-      var followAvailable = true;
-      if (userId != null) {
-        isMember = await _datasource.isCommunityMember(community.id, userId);
-        userRole = await _datasource.fetchUserRole(community.id, userId);
-        try {
-          isFollowing = await _datasource.isFollowingCommunity(
-            communityId: community.id,
-            userId: userId,
-          );
-        } catch (_) {
-          followAvailable = false;
-        }
-      }
-
-      // Newsletter stats are best-effort — if the table doesn't exist yet on
-      // this environment we don't want to break the screen.
-      CommunityNewsletterStats? newsletterStats;
-      try {
-        newsletterStats = await _datasource.fetchNewsletterStats(
-          communityId: community.id,
-          viewerEmail: user?.email,
-        );
-      } catch (_) {
-        newsletterStats = null;
-      }
-
-      if (!mounted) return;
-      BlogEngagementStore.instance.seedAll(articles.map((a) => a.blog));
-      setState(() {
-        _community = community;
-        _stats = stats;
-        _articles = articles;
-        _isMember = isMember;
-        _userRole = userRole;
-        _isFollowing = isFollowing;
-        _followAvailable = followAvailable;
-        _newsletterStats = newsletterStats;
-        _isLoading = false;
-      });
-      if (userId != null && articles.isNotEmpty) {
-        await BlogLikeCache.instance.preload(
-          userId: userId,
-          blogIds: articles.map((a) => a.blog.id).toList(),
-          datasource: BlogLikeDatasource(ReadmeSupabase.client),
-        );
-        if (mounted) setState(() {});
-      }
+      await ref.read(communityDetailProvider(_slug).notifier).toggleFollow();
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) setState(() => _followActionLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Seed shared engagement counts and preload liked state whenever the article
+    // list changes (initial load / refresh). Done here rather than in the
+    // provider's build() so we never mutate other providers during a build.
+    ref.listen(communityDetailProvider(_slug), (prev, next) {
+      final articles = next.value?.articles;
+      if (articles == null || identical(prev?.value?.articles, articles)) {
+        return;
+      }
+      final blogs = articles.map((a) => a.blog).toList();
+      ref.read(blogEngagementProvider.notifier).seedAll(blogs);
+      ref
+          .read(blogLikeProvider.notifier)
+          .preload(blogs.map((b) => b.id).toList());
+    });
+
+    final async = ref.watch(communityDetailProvider(_slug));
+    final state = async.value;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: _isLoading
+        child: (async.isLoading && state == null)
             ? const CommunityDetailShimmer()
-            : _error != null
-            ? _ErrorView(message: _error!, onBack: () => context.pop())
-            : RefreshIndicator(
-                onRefresh: _loadDetail,
-                child: CustomScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(
-                    parent: BouncingScrollPhysics(),
-                  ),
-                  slivers: [
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: EdgeInsets.fromLTRB(20.w, 8.h, 20.w, 0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildBackLink(),
-                            SizedBox(height: 20.h),
-                            _buildHeader(),
-                            SizedBox(height: 24.h),
-                            _buildActions(context),
-                            SizedBox(height: 24.h),
-                            Divider(color: Colors.grey.shade200, height: 1),
-                            SizedBox(height: 24.h),
-                            if (_newsletterStats != null) ...[
-                              CommunityNewsletterSubscribeCard(
-                                community: _community!,
-                                stats: _newsletterStats!,
-                                datasource: _datasource,
-                                onSubscribed: _loadDetail,
-                              ),
-                              SizedBox(height: 24.h),
-                              Divider(color: Colors.grey.shade200, height: 1),
-                              SizedBox(height: 24.h),
-                            ],
-                            Text(
-                              'Published articles',
-                              style: textStyle_16BoldBlack().copyWith(
-                                fontSize: 20.sp,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            SizedBox(height: 16.h),
-                          ],
-                        ),
-                      ),
-                    ),
-                    if (_articles.isEmpty)
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 20.w),
-                          child: Text(
-                            'No published articles yet.',
-                            style: textStyle_14RegularGrey().copyWith(
-                              fontSize: 14.sp,
-                              color: AppColors.subtitles,
-                            ),
-                          ),
-                        ),
-                      )
-                    else
-                      SliverPadding(
-                        padding: EdgeInsets.fromLTRB(20.w, 0, 20.w, 32.h),
-                        sliver: SliverList.separated(
-                          itemCount: _articles.length,
-                          separatorBuilder: (_, __) => SizedBox(height: 12.h),
-                          itemBuilder: (context, index) {
-                            return CommunityBlogCard(
-                              article: _articles[index],
-                              community: _community!,
-                            );
-                          },
-                        ),
-                      ),
-                  ],
+            : (async.hasError && state == null)
+            ? _ErrorView(
+                message: async.error.toString().replaceFirst(
+                  'Exception: ',
+                  '',
                 ),
+                onBack: () => context.pop(),
+              )
+            : RefreshIndicator(
+                onRefresh: () =>
+                    ref.read(communityDetailProvider(_slug).notifier).refresh(),
+                child: _buildContent(state!),
               ),
       ),
+    );
+  }
+
+  Widget _buildContent(CommunityDetailState state) {
+    final community = state.community;
+    final articles = state.articles;
+
+    return CustomScrollView(
+      physics: const AlwaysScrollableScrollPhysics(
+        parent: BouncingScrollPhysics(),
+      ),
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(20.w, 8.h, 20.w, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildBackLink(),
+                SizedBox(height: 20.h),
+                _buildHeader(state),
+                SizedBox(height: 24.h),
+                _buildActions(state),
+                SizedBox(height: 24.h),
+                Divider(color: Colors.grey.shade200, height: 1),
+                SizedBox(height: 24.h),
+                if (state.newsletterStats != null) ...[
+                  CommunityNewsletterSubscribeCard(
+                    community: community,
+                    stats: state.newsletterStats!,
+                    onSubscribed: () => ref
+                        .read(communityDetailProvider(_slug).notifier)
+                        .refresh(),
+                  ),
+                  SizedBox(height: 24.h),
+                  Divider(color: Colors.grey.shade200, height: 1),
+                  SizedBox(height: 24.h),
+                ],
+                Text(
+                  'Published articles',
+                  style: textStyle_16BoldBlack().copyWith(
+                    fontSize: 20.sp,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                SizedBox(height: 16.h),
+              ],
+            ),
+          ),
+        ),
+        if (articles.isEmpty)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20.w),
+              child: Text(
+                'No published articles yet.',
+                style: textStyle_14RegularGrey().copyWith(
+                  fontSize: 14.sp,
+                  color: AppColors.subtitles,
+                ),
+              ),
+            ),
+          )
+        else
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(20.w, 0, 20.w, 32.h),
+            sliver: SliverList.separated(
+              itemCount: articles.length,
+              separatorBuilder: (_, _) => SizedBox(height: 12.h),
+              itemBuilder: (context, index) {
+                return CommunityBlogCard(
+                  article: articles[index],
+                  community: community,
+                );
+              },
+            ),
+          ),
+      ],
     );
   }
 
@@ -242,9 +192,9 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
     );
   }
 
-  Widget _buildHeader() {
-    final community = _community!;
-    final stats = _stats;
+  Widget _buildHeader(CommunityDetailState state) {
+    final community = state.community;
+    final stats = state.stats;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -328,65 +278,9 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
     return '$contributorLabel · $followerLabel · $publishedLabel';
   }
 
-  Future<void> _toggleFollow() async {
-    final user = ReadmeSupabase.client.auth.currentUser;
-    if (user == null) {
-      context.push('/signin');
-      return;
-    }
+  Widget _buildActions(CommunityDetailState state) {
+    final community = state.community;
 
-    if (_community == null || _followActionLoading) return;
-
-    final wasFollowing = _isFollowing;
-    setState(() {
-      _isFollowing = !wasFollowing;
-      _followActionLoading = true;
-      if (_stats != null) {
-        _stats = CommunityStats(
-          memberCount: _stats!.memberCount,
-          followerCount: wasFollowing
-              ? (_stats!.followerCount - 1).clamp(0, 1 << 30)
-              : _stats!.followerCount + 1,
-          publishedCount: _stats!.publishedCount,
-        );
-      }
-    });
-
-    try {
-      if (wasFollowing) {
-        await _datasource.unfollowCommunity(
-          communityId: _community!.id,
-          userId: user.id,
-        );
-      } else {
-        await _datasource.followCommunity(
-          communityId: _community!.id,
-          userId: user.id,
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _isFollowing = wasFollowing;
-        if (_stats != null) {
-          _stats = CommunityStats(
-            memberCount: _stats!.memberCount,
-            followerCount: wasFollowing
-                ? _stats!.followerCount + 1
-                : (_stats!.followerCount - 1).clamp(0, 1 << 30),
-            publishedCount: _stats!.publishedCount,
-          );
-        }
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
-      );
-    } finally {
-      if (mounted) setState(() => _followActionLoading = false);
-    }
-  }
-
-  Widget _buildActions(BuildContext context) {
     return Column(
       children: [
         SizedBox(
@@ -394,8 +288,8 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
           height: 48.h,
           child: ElevatedButton(
             onPressed: () => context.push(
-              '/community/${_community!.slug}/dashboard',
-              extra: _community,
+              '/community/${community.slug}/dashboard',
+              extra: community,
             ),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.black,
@@ -420,7 +314,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
           width: double.infinity,
           height: 48.h,
           child: OutlinedButton(
-            onPressed: _isMember
+            onPressed: state.isMember
                 ? () => context.push('/create')
                 : () {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -447,14 +341,14 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
             ),
           ),
         ),
-        if (_followAvailable) ...[
+        if (state.followAvailable) ...[
           SizedBox(height: 12.h),
           SizedBox(
             width: double.infinity,
             height: 48.h,
-            child: _isFollowing
+            child: state.isFollowing
                 ? OutlinedButton(
-                    onPressed: _followActionLoading ? null : _toggleFollow,
+                    onPressed: _followActionLoading ? null : _onFollowTap,
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.black,
                       side: const BorderSide(color: AppColors.black),
@@ -471,7 +365,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                     ),
                   )
                 : ElevatedButton(
-                    onPressed: _followActionLoading ? null : _toggleFollow,
+                    onPressed: _followActionLoading ? null : _onFollowTap,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.black,
                       foregroundColor: Colors.white,

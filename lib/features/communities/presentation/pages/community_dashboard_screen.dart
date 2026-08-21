@@ -14,11 +14,13 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:Readme/core/network/readme_supabase.dart';
+import 'package:Readme/core/providers/datasource_providers.dart';
+import 'package:Readme/core/providers/supabase_providers.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 enum _DashboardTab { drafts, newsletter, requests, settings, members }
 
-class CommunityDashboardScreen extends StatefulWidget {
+class CommunityDashboardScreen extends ConsumerStatefulWidget {
   const CommunityDashboardScreen({
     super.key,
     required this.slug,
@@ -29,11 +31,12 @@ class CommunityDashboardScreen extends StatefulWidget {
   final Community? community;
 
   @override
-  State<CommunityDashboardScreen> createState() =>
+  ConsumerState<CommunityDashboardScreen> createState() =>
       _CommunityDashboardScreenState();
 }
 
-class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
+class _CommunityDashboardScreenState
+    extends ConsumerState<CommunityDashboardScreen> {
   static const _maxImageBytes = 2 * 1024 * 1024;
   static const _roles = ['admin', 'contributor'];
   // Only contributor can be self-requested. Admin is granted later via the
@@ -41,7 +44,8 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
   // `community_join_requests`).
   static const _requestableRoles = ['contributor'];
 
-  late final CommunityRemoteDatasource _datasource;
+  CommunityRemoteDatasource get _datasource =>
+      ref.read(communityRemoteDatasourceProvider);
   final ImagePicker _picker = ImagePicker();
   final TextEditingController _inviteNameController = TextEditingController();
 
@@ -83,7 +87,6 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
   @override
   void initState() {
     super.initState();
-    _datasource = CommunityRemoteDatasource(ReadmeSupabase.client);
     _community = widget.community;
     _loadDashboard();
   }
@@ -116,7 +119,7 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
         return;
       }
 
-      final userId = ReadmeSupabase.client.auth.currentUser?.id;
+      final userId = ref.read(currentUserProvider)?.id;
       if (userId == null) {
         if (!mounted) return;
         setState(() {
@@ -458,7 +461,7 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
       return;
     }
 
-    final userId = ReadmeSupabase.client.auth.currentUser?.id;
+    final userId = ref.read(currentUserProvider)?.id;
     if (userId == null) return;
 
     setState(() => _isPublishingIssue = true);
@@ -519,7 +522,7 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
 
   Future<void> _submitJoinRequest() async {
     if (_community == null) return;
-    final userId = ReadmeSupabase.client.auth.currentUser?.id;
+    final userId = ref.read(currentUserProvider)?.id;
     if (userId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please sign in to request to join.')),

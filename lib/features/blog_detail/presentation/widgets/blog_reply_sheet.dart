@@ -1,10 +1,12 @@
-import 'package:Readme/core/network/readme_supabase.dart';
+import 'package:Readme/core/providers/datasource_providers.dart';
+import 'package:Readme/core/providers/supabase_providers.dart';
 import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/app_image.dart';
 import 'package:Readme/core/utils/text_style.dart';
 import 'package:Readme/features/blog_detail/data/datasource/blog_comment_datasource.dart';
 import 'package:Readme/features/blog_detail/domain/entities/blog_comment.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
@@ -34,7 +36,7 @@ Future<void> showBlogReplySheet({
   );
 }
 
-class _BlogReplySheet extends StatefulWidget {
+class _BlogReplySheet extends ConsumerStatefulWidget {
   const _BlogReplySheet({
     required this.blogId,
     required this.parentComment,
@@ -46,12 +48,12 @@ class _BlogReplySheet extends StatefulWidget {
   final VoidCallback onReplyPosted;
 
   @override
-  State<_BlogReplySheet> createState() => _BlogReplySheetState();
+  ConsumerState<_BlogReplySheet> createState() => _BlogReplySheetState();
 }
 
-class _BlogReplySheetState extends State<_BlogReplySheet> {
+class _BlogReplySheetState extends ConsumerState<_BlogReplySheet> {
   final _controller = TextEditingController();
-  final _datasource = BlogCommentDatasource(ReadmeSupabase.client);
+  late final BlogCommentDatasource _datasource;
   bool _submitting = false;
   String? _avatarUrl;
 
@@ -60,19 +62,18 @@ class _BlogReplySheetState extends State<_BlogReplySheet> {
   @override
   void initState() {
     super.initState();
+    _datasource = ref.read(blogCommentDatasourceProvider);
     _loadCurrentUserAvatar();
   }
 
   Future<void> _loadCurrentUserAvatar() async {
-    final user = ReadmeSupabase.client.auth.currentUser;
+    final user = ref.read(currentUserProvider);
     if (user == null) return;
 
     try {
-      final profile = await ReadmeSupabase.client
-          .from('profiles')
-          .select('avatar_url')
-          .eq('id', user.id)
-          .maybeSingle();
+      final profile = await ref
+          .read(profileRemoteDatasourceProvider)
+          .fetchProfileById(user.id);
       if (!mounted) return;
       setState(() => _avatarUrl = profile?['avatar_url'] as String?);
     } catch (_) {}
@@ -88,7 +89,7 @@ class _BlogReplySheetState extends State<_BlogReplySheet> {
     final body = _controller.text.trim();
     if (body.isEmpty || _submitting) return;
 
-    final user = ReadmeSupabase.client.auth.currentUser;
+    final user = ref.read(currentUserProvider);
     if (user == null) {
       if (mounted) context.push('/signin');
       return;

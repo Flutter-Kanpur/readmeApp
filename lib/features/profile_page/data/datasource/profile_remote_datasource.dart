@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class UserFollowStats {
@@ -82,5 +84,38 @@ class ProfileRemoteDatasource {
         .delete()
         .eq('follower_id', followerId)
         .eq('following_id', authorId);
+  }
+
+  /// Applies profile field updates for [userId].
+  Future<void> updateProfile({
+    required String userId,
+    required Map<String, dynamic> updates,
+  }) async {
+    await client.from('profiles').update(updates).eq('id', userId);
+  }
+
+  /// Uploads avatar [bytes] to storage and returns the public URL.
+  Future<String> uploadAvatar({
+    required String userId,
+    required Uint8List bytes,
+    required String fileExtension,
+  }) async {
+    final fileName =
+        'profile_${userId}_${DateTime.now().millisecondsSinceEpoch}.$fileExtension';
+    final filePath = 'avatars/$fileName';
+    await client.storage.from('blog_images').uploadBinary(filePath, bytes);
+    return client.storage.from('blog_images').getPublicUrl(filePath);
+  }
+
+  /// Invokes the `delete-account` edge function. Throws on a non-2xx response.
+  Future<void> deleteAccount() async {
+    final response = await client.functions.invoke('delete-account');
+    if (response.status < 200 || response.status >= 300) {
+      final data = response.data;
+      final message = data is Map<String, dynamic>
+          ? data['error'] as String?
+          : null;
+      throw Exception(message ?? 'The server could not delete your account.');
+    }
   }
 }

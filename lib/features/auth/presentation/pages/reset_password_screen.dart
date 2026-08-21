@@ -1,6 +1,8 @@
 import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/text_style.dart';
+import 'package:Readme/features/auth/presentation/state/auth_controller_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -8,21 +10,19 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../shared/widgets/gradient_background.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../../shared/widgets/textfield.dart';
-import 'package:Readme/core/network/readme_supabase.dart';
 
 /// Shown when the user opens a recovery link and lands in a recovery session.
-class ResetPasswordScreen extends StatefulWidget {
+class ResetPasswordScreen extends ConsumerStatefulWidget {
   const ResetPasswordScreen({super.key});
 
   @override
-  State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
+  ConsumerState<ResetPasswordScreen> createState() =>
+      _ResetPasswordScreenState();
 }
 
-class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
+class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
   late final TextEditingController _passwordController;
   late final TextEditingController _confirmPasswordController;
-  bool _loading = false;
-  final _supabase = ReadmeSupabase.client;
 
   @override
   void initState() {
@@ -46,7 +46,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   }
 
   Future<void> _updatePassword() async {
-    if (_loading) return;
+    if (ref.read(authControllerProvider).isLoading) return;
 
     final password = _passwordController.text;
     final confirm = _confirmPasswordController.text;
@@ -79,12 +79,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       return;
     }
 
-    setState(() => _loading = true);
-
     try {
-      await _supabase.auth.updateUser(
-        UserAttributes(password: password),
-      );
+      await ref.read(authControllerProvider.notifier).updatePassword(password);
 
       if (!mounted) return;
       _showSnackBar(
@@ -93,8 +89,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           backgroundColor: Colors.green,
         ),
       );
-      await _supabase.auth.signOut();
-      if (!mounted) return;
       context.go('/signin');
     } on AuthException catch (e) {
       _showSnackBar(
@@ -110,8 +104,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           backgroundColor: Colors.red,
         ),
       );
-    } finally {
-      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -172,7 +164,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       ),
                       SizedBox(height: 24.h),
                       PrimaryButton(
-                        loading: _loading,
+                        loading: ref.watch(authControllerProvider).isLoading,
                         text: 'Update password',
                         onPressed: _updatePassword,
                       ),

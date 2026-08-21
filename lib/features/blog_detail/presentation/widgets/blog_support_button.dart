@@ -1,18 +1,22 @@
-import 'package:Readme/core/cache/blog_engagement_store.dart';
-import 'package:Readme/core/cache/blog_like_cache.dart';
-import 'package:Readme/core/network/readme_supabase.dart';
+import 'package:Readme/core/providers/datasource_providers.dart';
+import 'package:Readme/core/providers/supabase_providers.dart';
+import 'package:Readme/core/state/blog_engagement_provider.dart';
+import 'package:Readme/core/state/blog_like_provider.dart';
 import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/text_style.dart';
 import 'package:Readme/features/blog_detail/data/datasource/blog_like_datasource.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
 /// Heart-style support control for articles.
 ///
-/// Counts come from [BlogEngagementStore] (seeded from feed rows). Liked state
-/// comes from [BlogLikeCache] (batch-preloaded). Never re-counts likes on mount.
-class BlogSupportButton extends StatefulWidget {
+/// Counts come from [blogEngagementProvider] (seeded from feed rows); liked
+/// state comes from [blogLikeProvider] (batch-preloaded). Both are watched, so
+/// a like on any screen updates every mounted button. Never re-counts likes on
+/// mount.
+class BlogSupportButton extends ConsumerStatefulWidget {
   const BlogSupportButton({
     super.key,
     required this.blogId,
@@ -27,29 +31,21 @@ class BlogSupportButton extends StatefulWidget {
   final bool compact;
 
   @override
-  State<BlogSupportButton> createState() => _BlogSupportButtonState();
+  ConsumerState<BlogSupportButton> createState() => _BlogSupportButtonState();
 }
 
-class _BlogSupportButtonState extends State<BlogSupportButton>
+class _BlogSupportButtonState extends ConsumerState<BlogSupportButton>
     with SingleTickerProviderStateMixin {
   late final BlogLikeDatasource _datasource;
-  late AnimationController _bounceController;
-  late Animation<double> _bounceScale;
+  late final AnimationController _bounceController;
+  late final Animation<double> _bounceScale;
 
-  bool _isLiked = false;
   bool _actionLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _datasource = BlogLikeDatasource(ReadmeSupabase.client);
-    final store = BlogEngagementStore.instance;
-    store.seed(
-      blogId: widget.blogId,
-      likeCount: widget.initialLikeCount,
-      viewCount: store.viewCount(widget.blogId),
-    );
-    _isLiked = _resolveLiked();
+    _datasource = ref.read(blogLikeDatasourceProvider);
     _bounceController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 280),
@@ -62,71 +58,37 @@ class _BlogSupportButtonState extends State<BlogSupportButton>
         ]).animate(
           CurvedAnimation(parent: _bounceController, curve: Curves.easeOut),
         );
-    BlogEngagementStore.instance.addListener(_onStoreChanged);
-  }
-
-  @override
-  void didUpdateWidget(covariant BlogSupportButton oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    final store = BlogEngagementStore.instance;
-    if (oldWidget.blogId != widget.blogId) {
-      store.seed(
-        blogId: widget.blogId,
-        likeCount: widget.initialLikeCount,
-        viewCount: store.viewCount(widget.blogId),
-      );
-      _isLiked = _resolveLiked();
-    } else if (oldWidget.initialLikeCount != widget.initialLikeCount) {
-      store.seed(
-        blogId: widget.blogId,
-        likeCount: widget.initialLikeCount,
-        viewCount: store.viewCount(widget.blogId),
-      );
-    }
   }
 
   @override
   void dispose() {
-    BlogEngagementStore.instance.removeListener(_onStoreChanged);
     _bounceController.dispose();
     super.dispose();
   }
 
-  void _onStoreChanged() {
-    if (mounted) setState(() {});
-  }
+  bool _resolveLiked(bool? liked) => liked ?? widget.initialIsLiked ?? false;
 
-  bool _resolveLiked() {
-    if (widget.initialIsLiked != null) return widget.initialIsLiked!;
-    return BlogLikeCache.instance.isLiked(widget.blogId) ?? false;
-  }
-
-  int get _likeCount => BlogEngagementStore.instance.likeCount(
-        widget.blogId,
-        fallback: widget.initialLikeCount,
-      );
-
-  Future<void> _toggleSupport() async {
+  Future<void> _toggleSupport(bool wasLiked, int previousCount) async {
     if (_actionLoading) return;
 
-    final user = ReadmeSupabase.client.auth.currentUser;
+    final user = ref.read(currentUserProvider);
     if (user == null) {
       context.push('/signin');
       return;
     }
 
-    final wasLiked = _isLiked;
-    final previousCount = _likeCount;
-
-    setState(() {
-      _isLiked = !wasLiked;
-      _actionLoading = true;
-    });
-    BlogLikeCache.instance.setLiked(widget.blogId, !wasLiked);
-    BlogEngagementStore.instance.applyLikeDelta(
-      widget.blogId,
-      liked: !wasLiked,
+    final engagement = ref.read(blogEngagementProvider.notifier);
+    // Ensure a base count exists before mutating so the delta increments from
+    // the real value rather than from zero.
+    engagement.seed(
+      blogId: widget.blogId,
+      likeCount: widget.initialLikeCount,
+      viewCount: engagement.viewCount(widget.blogId),
     );
+
+    setState(() => _actionLoading = true);
+    ref.read(blogLikeProvider.notifier).setLiked(widget.blogId, !wasLiked);
+    engagement.applyLikeDelta(widget.blogId, liked: !wasLiked);
 
     if (!wasLiked) {
       _bounceController.forward(from: 0);
@@ -140,9 +102,8 @@ class _BlogSupportButtonState extends State<BlogSupportButton>
       }
     } catch (e) {
       if (!mounted) return;
-      setState(() => _isLiked = wasLiked);
-      BlogLikeCache.instance.setLiked(widget.blogId, wasLiked);
-      BlogEngagementStore.instance.setLikeCount(widget.blogId, previousCount);
+      ref.read(blogLikeProvider.notifier).setLiked(widget.blogId, wasLiked);
+      engagement.setLikeCount(widget.blogId, previousCount);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
       );
@@ -163,42 +124,52 @@ class _BlogSupportButtonState extends State<BlogSupportButton>
 
   @override
   Widget build(BuildContext context) {
-    if (widget.compact) {
-      return _buildCompact();
-    }
-    return _buildExpanded();
+    final isLiked = _resolveLiked(
+      ref.watch(blogLikeProvider.select((m) => m[widget.blogId])),
+    );
+    final likeCount = ref.watch(
+      blogEngagementProvider.select(
+        (m) => m[widget.blogId]?.likeCount ?? widget.initialLikeCount,
+      ),
+    );
+
+    return widget.compact
+        ? _buildCompact(isLiked: isLiked, likeCount: likeCount)
+        : _buildExpanded(isLiked: isLiked, likeCount: likeCount);
   }
 
-  Widget _buildHeart({required double size}) {
+  Widget _buildHeart({required double size, required bool isLiked}) {
     return ScaleTransition(
       scale: _bounceScale,
       child: Icon(
-        _isLiked ? Icons.favorite : Icons.favorite_border,
+        isLiked ? Icons.favorite : Icons.favorite_border,
         size: size,
-        color: _isLiked ? const Color(0xFFE11D48) : AppColors.subtitles,
+        color: isLiked ? const Color(0xFFE11D48) : AppColors.subtitles,
       ),
     );
   }
 
-  Widget _buildCompact() {
+  Widget _buildCompact({required bool isLiked, required int likeCount}) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: _actionLoading ? null : _toggleSupport,
+        onTap: _actionLoading
+            ? null
+            : () => _toggleSupport(isLiked, likeCount),
         borderRadius: BorderRadius.circular(999),
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 4.h),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildHeart(size: 18.sp),
+              _buildHeart(size: 18.sp, isLiked: isLiked),
               SizedBox(width: 6.w),
               Text(
-                _formatCount(_likeCount),
+                _formatCount(likeCount),
                 style: textStyle_12RegularGrey().copyWith(
                   fontSize: 12.sp,
                   fontWeight: FontWeight.w600,
-                  color: _isLiked
+                  color: isLiked
                       ? const Color(0xFFE11D48)
                       : AppColors.subtitles,
                 ),
@@ -210,22 +181,24 @@ class _BlogSupportButtonState extends State<BlogSupportButton>
     );
   }
 
-  Widget _buildExpanded() {
-    final label = _isLiked ? 'Supported' : 'Support';
-    final countLabel = ' · ${_formatCount(_likeCount)}';
+  Widget _buildExpanded({required bool isLiked, required int likeCount}) {
+    final label = isLiked ? 'Supported' : 'Support';
+    final countLabel = ' · ${_formatCount(likeCount)}';
 
     return Material(
-      color: _isLiked ? const Color(0xFFFFF1F2) : Colors.white,
+      color: isLiked ? const Color(0xFFFFF1F2) : Colors.white,
       borderRadius: BorderRadius.circular(999),
       child: InkWell(
-        onTap: _actionLoading ? null : _toggleSupport,
+        onTap: _actionLoading
+            ? null
+            : () => _toggleSupport(isLiked, likeCount),
         borderRadius: BorderRadius.circular(999),
         child: Container(
           padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 12.h),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(999),
             border: Border.all(
-              color: _isLiked
+              color: isLiked
                   ? const Color(0xFFE11D48).withOpacity(0.35)
                   : AppColors.borderGrey,
             ),
@@ -233,14 +206,14 @@ class _BlogSupportButtonState extends State<BlogSupportButton>
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildHeart(size: 20.sp),
+              _buildHeart(size: 20.sp, isLiked: isLiked),
               SizedBox(width: 10.w),
               Text(
                 '$label$countLabel',
                 style: textStyle_14RegularBlack().copyWith(
                   fontSize: 14.sp,
                   fontWeight: FontWeight.w600,
-                  color: _isLiked ? const Color(0xFFE11D48) : AppColors.black,
+                  color: isLiked ? const Color(0xFFE11D48) : AppColors.black,
                 ),
               ),
             ],

@@ -50,7 +50,7 @@ dependencies:
   lottie: ^3.1.2
   flutter_html: ^3.0.0
   dart_quill_delta: ^10.8.3
-  flutter_quill: ^11.5.0
+  flutter_quill: ^11.5.1 # 11.5.1 adds TextInputClient.onFocusReceived required by Flutter 3.44.9
   flutter_quill_extensions: ^11.0.0
   flutter_quill_delta_from_html: ^1.5.3
   markdown: ^7.3.0
@@ -63,6 +63,8 @@ dependencies:
   pdfrx: ^2.2.24
   url_launcher: ^6.3.2
   app_links: ^6.4.0
+  shorebird_code_push: ^2.0.7
+  flutter_riverpod: ^3.3.2
 
 dev_dependencies:
   flutter_test:
@@ -90,10 +92,13 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
+    - shorebird.yaml
     - assets/images/
     - assets/icons/
     - assets/lottie/
     - assets/lottie/empty.json
+    # Standalone only — added by tool/enable_standalone_env.sh (gitignored .env)
+    - .env
    # Standalone only — added by tool/enable_standalone_env.sh (gitignored .env)
 #    - .env
 

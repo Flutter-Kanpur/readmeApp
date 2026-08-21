@@ -1,67 +1,27 @@
 import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/text_style.dart';
-import 'package:Readme/features/communities/data/datasource/community_remote_datasource.dart';
-import 'package:Readme/features/communities/domain/entities/community.dart';
+import 'package:Readme/features/communities/presentation/state/communities_provider.dart';
 import 'package:Readme/features/communities/presentation/widgets/community_card.dart';
 import 'package:Readme/shared/widgets/gradient_background.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:Readme/core/network/readme_supabase.dart';
 
-class CommunitiesScreen extends StatefulWidget {
+class CommunitiesScreen extends ConsumerWidget {
   const CommunitiesScreen({super.key});
 
   @override
-  State<CommunitiesScreen> createState() => _CommunitiesScreenState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(communitiesProvider);
+    final communities = async.value;
 
-class _CommunitiesScreenState extends State<CommunitiesScreen> {
-  late final CommunityRemoteDatasource _datasource;
-
-  List<Community> _communities = [];
-  bool _isLoading = true;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _datasource = CommunityRemoteDatasource(ReadmeSupabase.client);
-    _loadCommunities();
-  }
-
-  Future<void> _loadCommunities() async {
-    if (!mounted) return;
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-
-    try {
-      final communities = await _datasource.fetchCommunities();
-      if (!mounted) return;
-      setState(() {
-        _communities = communities;
-        _isLoading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
     return GradientBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: SafeArea(
           child: RefreshIndicator(
-            onRefresh: _loadCommunities,
+            onRefresh: () => ref.read(communitiesProvider.notifier).refresh(),
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(
                 parent: BouncingScrollPhysics(),
@@ -105,7 +65,7 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
                     ),
                   ),
                 ),
-                if (_isLoading)
+                if (async.isLoading && communities == null)
                   SliverFillRemaining(
                     hasScrollBody: false,
                     child: Center(
@@ -115,15 +75,19 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
                       ),
                     ),
                   )
-                else if (_error != null)
+                else if (async.hasError && communities == null)
                   SliverFillRemaining(
                     hasScrollBody: false,
                     child: _ErrorState(
-                      message: _error!,
-                      onRetry: _loadCommunities,
+                      message: async.error.toString().replaceFirst(
+                        'Exception: ',
+                        '',
+                      ),
+                      onRetry: () =>
+                          ref.read(communitiesProvider.notifier).refresh(),
                     ),
                   )
-                else if (_communities.isEmpty)
+                else if ((communities ?? const []).isEmpty)
                   SliverFillRemaining(
                     hasScrollBody: false,
                     child: _EmptyState(),
@@ -132,16 +96,14 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
                   SliverPadding(
                     padding: EdgeInsets.fromLTRB(20.w, 0, 20.w, 100.h),
                     sliver: SliverList.separated(
-                      itemCount: _communities.length,
-                      separatorBuilder: (_, __) => SizedBox(height: 12.h),
+                      itemCount: communities!.length,
+                      separatorBuilder: (_, _) => SizedBox(height: 12.h),
                       itemBuilder: (context, index) {
-                        final community = _communities[index];
+                        final community = communities[index];
                         return CommunityCard(
                           community: community,
-                          onTap: () => context.push(
-                            '/community/${community.slug}',
-                            extra: community,
-                          ),
+                          onTap: () =>
+                              context.push('/community/${community.slug}'),
                         );
                       },
                     ),

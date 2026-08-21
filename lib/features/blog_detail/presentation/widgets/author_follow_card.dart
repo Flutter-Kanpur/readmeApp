@@ -1,3 +1,5 @@
+import 'package:Readme/core/providers/datasource_providers.dart';
+import 'package:Readme/core/providers/supabase_providers.dart';
 import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/app_image.dart';
 import 'package:Readme/core/utils/text_style.dart';
@@ -5,21 +7,20 @@ import 'package:Readme/features/home_page/domain/entities/blog.dart';
 import 'package:Readme/features/profile_page/data/datasource/profile_remote_datasource.dart';
 import 'package:Readme/features/profile_page/presentation/utils/open_author_profile.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:Readme/core/network/readme_supabase.dart';
 
-class AuthorFollowCard extends StatefulWidget {
+class AuthorFollowCard extends ConsumerStatefulWidget {
   const AuthorFollowCard({super.key, required this.author});
 
   final Author author;
 
   @override
-  State<AuthorFollowCard> createState() => _AuthorFollowCardState();
+  ConsumerState<AuthorFollowCard> createState() => _AuthorFollowCardState();
 }
 
-class _AuthorFollowCardState extends State<AuthorFollowCard> {
+class _AuthorFollowCardState extends ConsumerState<AuthorFollowCard> {
   late final ProfileRemoteDatasource _datasource;
 
   bool _isLoading = true;
@@ -30,7 +31,7 @@ class _AuthorFollowCardState extends State<AuthorFollowCard> {
   @override
   void initState() {
     super.initState();
-    _datasource = ProfileRemoteDatasource(ReadmeSupabase.client);
+    _datasource = ref.read(profileRemoteDatasourceProvider);
     _loadFollowState();
   }
 
@@ -41,7 +42,7 @@ class _AuthorFollowCardState extends State<AuthorFollowCard> {
       return;
     }
 
-    final user = ReadmeSupabase.client.auth.currentUser;
+    final user = ref.read(currentUserProvider);
     if (user == null) {
       if (mounted) {
         setState(() {
@@ -81,7 +82,7 @@ class _AuthorFollowCardState extends State<AuthorFollowCard> {
     final authorId = widget.author.id;
     if (authorId == null || _actionLoading) return;
 
-    final user = ReadmeSupabase.client.auth.currentUser;
+    final user = ref.read(currentUserProvider);
     if (user == null) {
       context.push('/signin');
       return;
@@ -131,7 +132,7 @@ class _AuthorFollowCardState extends State<AuthorFollowCard> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           GestureDetector(
-            onTap: () => openAuthorProfile(context, widget.author),
+            onTap: () => openAuthorProfile(context, ref, widget.author),
             child: Row(
               children: [
                 CircleAvatar(

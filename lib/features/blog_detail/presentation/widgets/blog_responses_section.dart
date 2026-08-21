@@ -1,4 +1,5 @@
-import 'package:Readme/core/network/readme_supabase.dart';
+import 'package:Readme/core/providers/datasource_providers.dart';
+import 'package:Readme/core/providers/supabase_providers.dart';
 import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/text_style.dart';
 import 'package:Readme/features/blog_detail/data/datasource/blog_comment_datasource.dart';
@@ -6,19 +7,21 @@ import 'package:Readme/features/blog_detail/domain/entities/blog_comment.dart';
 import 'package:Readme/features/blog_detail/presentation/widgets/blog_comment_tile.dart';
 import 'package:Readme/features/blog_detail/presentation/widgets/blog_reply_sheet.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
-class BlogResponsesSection extends StatefulWidget {
+class BlogResponsesSection extends ConsumerStatefulWidget {
   const BlogResponsesSection({super.key, required this.blogId});
 
   final String blogId;
 
   @override
-  State<BlogResponsesSection> createState() => _BlogResponsesSectionState();
+  ConsumerState<BlogResponsesSection> createState() =>
+      _BlogResponsesSectionState();
 }
 
-class _BlogResponsesSectionState extends State<BlogResponsesSection> {
+class _BlogResponsesSectionState extends ConsumerState<BlogResponsesSection> {
   final _composerController = TextEditingController();
   late final BlogCommentDatasource _datasource;
 
@@ -31,7 +34,7 @@ class _BlogResponsesSectionState extends State<BlogResponsesSection> {
   @override
   void initState() {
     super.initState();
-    _datasource = BlogCommentDatasource(ReadmeSupabase.client);
+    _datasource = ref.read(blogCommentDatasourceProvider);
     _loadComments();
   }
 
@@ -76,7 +79,7 @@ class _BlogResponsesSectionState extends State<BlogResponsesSection> {
     setState(() => _loading = true);
     try {
       final comments = await _datasource.fetchComments(widget.blogId);
-      final user = ReadmeSupabase.client.auth.currentUser;
+      final user = ref.read(currentUserProvider);
       if (user != null) {
         final likedIds = await _datasource.fetchLikedCommentIds(
           userId: user.id,
@@ -127,7 +130,7 @@ class _BlogResponsesSectionState extends State<BlogResponsesSection> {
     final body = _composerController.text.trim();
     if (body.isEmpty || _posting) return;
 
-    final user = ReadmeSupabase.client.auth.currentUser;
+    final user = ref.read(currentUserProvider);
     if (user == null) {
       if (mounted) context.push('/signin');
       return;
@@ -153,7 +156,7 @@ class _BlogResponsesSectionState extends State<BlogResponsesSection> {
   }
 
   void _openReplySheet(BlogComment parentComment) {
-    final user = ReadmeSupabase.client.auth.currentUser;
+    final user = ref.read(currentUserProvider);
     if (user == null) {
       context.push('/signin');
       return;
@@ -188,6 +191,7 @@ class _BlogResponsesSectionState extends State<BlogResponsesSection> {
 
   @override
   Widget build(BuildContext context) {
+    final isLoggedIn = ref.watch(currentUserProvider) != null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -227,6 +231,7 @@ class _BlogResponsesSectionState extends State<BlogResponsesSection> {
           controller: _composerController,
           posting: _posting,
           maxLength: _maxLength,
+          isLoggedIn: isLoggedIn,
           onSubmit: _postTopLevelComment,
           onTapWhenLoggedOut: () => context.push('/signin'),
         ),
@@ -268,6 +273,7 @@ class _TopLevelComposer extends StatelessWidget {
     required this.controller,
     required this.posting,
     required this.maxLength,
+    required this.isLoggedIn,
     required this.onSubmit,
     required this.onTapWhenLoggedOut,
   });
@@ -275,13 +281,12 @@ class _TopLevelComposer extends StatelessWidget {
   final TextEditingController controller;
   final bool posting;
   final int maxLength;
+  final bool isLoggedIn;
   final VoidCallback onSubmit;
   final VoidCallback onTapWhenLoggedOut;
 
   @override
   Widget build(BuildContext context) {
-    final isLoggedIn = ReadmeSupabase.client.auth.currentUser != null;
-
     return Container(
       decoration: BoxDecoration(
         border: Border.all(color: AppColors.borderGrey),

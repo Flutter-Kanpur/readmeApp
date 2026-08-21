@@ -1,13 +1,14 @@
 import 'package:Readme/core/utils/text_style.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:Readme/core/providers/supabase_providers.dart';
 import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/app_image.dart';
 import 'package:Readme/core/utils/quill_content_parser.dart';
-import 'package:Readme/features/blog_detail/presentation/widgets/advertisement_banner.dart';
 import 'package:Readme/features/blog_detail/presentation/widgets/author_follow_card.dart';
 import 'package:Readme/features/blog_detail/presentation/widgets/blog_content_viewer.dart';
 import 'package:Readme/features/blog_detail/presentation/widgets/blog_responses_section.dart';
@@ -16,30 +17,27 @@ import 'package:Readme/features/blog_detail/presentation/widgets/blog_view_count
 import 'package:Readme/features/home_page/domain/entities/blog.dart';
 import 'package:Readme/features/profile_page/presentation/utils/open_author_profile.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:Readme/core/network/readme_supabase.dart';
 
-class BlogDetailScreen extends StatelessWidget {
+class BlogDetailScreen extends ConsumerWidget {
   final Blog blog;
 
   const BlogDetailScreen({super.key, required this.blog});
 
-  String _storagePublicUrl(String path) {
-    return ReadmeSupabase.client.storage
-        .from('blog_images')
-        .getPublicUrl(path);
-  }
-
-  String? _resolveCoverImageUrl() {
+  String? _resolveCoverImageUrl(SupabaseClient client) {
+    String storagePublicUrl(String path) =>
+        client.storage.from('blog_images').getPublicUrl(path);
     return resolveBlogImageUrl(
           blog.coverImage,
-          storagePathToUrl: _storagePublicUrl,
+          storagePathToUrl: storagePublicUrl,
         ) ??
-        extractFirstImageUrl(blog.content, storagePathToUrl: _storagePublicUrl);
+        extractFirstImageUrl(blog.content, storagePathToUrl: storagePublicUrl);
   }
 
   @override
-  Widget build(BuildContext context) {
-    final coverImageUrl = _resolveCoverImageUrl();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final coverImageUrl = _resolveCoverImageUrl(
+      ref.read(supabaseClientProvider),
+    );
 
     return Container(
       color: Colors.white,
@@ -138,7 +136,7 @@ class BlogDetailScreen extends StatelessWidget {
                         children: [
                           GestureDetector(
                             onTap: () =>
-                                openAuthorProfile(context, blog.author),
+                                openAuthorProfile(context, ref, blog.author),
                             child: CircleAvatar(
                               radius: 20.r,
                               backgroundColor: Colors.grey.shade200,

@@ -7,26 +7,23 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../shared/widgets/gradient_background.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../../shared/widgets/textfield.dart';
-import 'package:Readme/core/network/readme_supabase.dart';
+import 'package:Readme/features/auth/presentation/state/auth_controller_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class LoginWithEmail extends StatefulWidget {
+class LoginWithEmail extends ConsumerStatefulWidget {
   const LoginWithEmail({super.key});
 
   @override
-  State<LoginWithEmail> createState() => _LoginWithEmailState();
+  ConsumerState<LoginWithEmail> createState() => _LoginWithEmailState();
 }
 
-class _LoginWithEmailState extends State<LoginWithEmail> {
+class _LoginWithEmailState extends ConsumerState<LoginWithEmail> {
   TextEditingController _emailController = TextEditingController();
   TextEditingController _passwordController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
   final _emailFocusNode = FocusNode();
   final _passwordFocusNode = FocusNode();
   final _emailFieldKey = GlobalKey();
   final _passwordFieldKey = GlobalKey();
-
-  bool loading = false;
-  final supabase = ReadmeSupabase.client;
 
   void _showSnackBar(SnackBar snackBar) {
     if (!mounted) return;
@@ -65,7 +62,7 @@ class _LoginWithEmailState extends State<LoginWithEmail> {
   }
 
   Future<void> _login() async {
-    if (loading) return;
+    if (ref.read(authControllerProvider).isLoading) return;
 
     final email = _emailController.text.trim();
     final password = _passwordController.text;
@@ -89,12 +86,10 @@ class _LoginWithEmailState extends State<LoginWithEmail> {
       return;
     }
 
-    setState(() => loading = true);
     try {
-      await supabase.auth.signInWithPassword(
-        email: email,
-        password: password,
-      );
+      await ref
+          .read(authControllerProvider.notifier)
+          .signIn(email: email, password: password);
 
       if (!mounted) return;
       context.go('/home');
@@ -113,8 +108,6 @@ class _LoginWithEmailState extends State<LoginWithEmail> {
           backgroundColor: Colors.red,
         ),
       );
-    } finally {
-      if (mounted) setState(() => loading = false);
     }
   }
 
@@ -244,8 +237,9 @@ class _LoginWithEmailState extends State<LoginWithEmail> {
   }
 
   Widget _buildLoginButton() {
+    final isLoading = ref.watch(authControllerProvider).isLoading;
     return PrimaryButton(
-      loading: loading,
+      loading: isLoading,
       text: 'Login',
       onPressed: _login,
     );

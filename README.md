@@ -73,6 +73,70 @@ adb shell pm get-app-links com.drishtant.readme
 
 App Links verification usually requires a **release/signed** build whose certificate matches `assetlinks.json`.
 
+## Shorebird (OTA code push)
+
+ReadMe uses [Shorebird](https://shorebird.dev) to ship **Dart code fixes** without waiting for Play Store review. Native/plugin changes still require a full store release.
+
+Shorebird applies only to the **standalone** ReadMe app (`com.drishtant.readme`). It is skipped when embedded in Flutter Kanpur.
+
+### One-time setup
+
+1. Install the CLI: [Shorebird Quick Start](https://docs.shorebird.dev/getting-started/)
+2. From the project root:
+
+   ```bash
+   chmod +x tool/shorebird_*.sh
+   ./tool/shorebird_setup.sh
+   ```
+
+   This runs `shorebird login` and `shorebird init`, which assigns your real `app_id` in `shorebird.yaml`.
+
+3. Commit `shorebird.yaml` (app id is not secret).
+
+**Flutter not in PATH?** This project uses FVM (`3.38.7`). Either:
+
+```bash
+fvm flutter pub get
+# or add FVM to PATH, then re-run the scripts
+export PATH="$PATH:$HOME/fvm/default/bin"   # if you use fvm global
+```
+
+The tool scripts auto-detect `fvm flutter` and `~/fvm/versions/<version>/bin/flutter`.
+
+### Release to stores (base binary) — do this FIRST
+
+You **must** create a Shorebird release before any patch will work.
+
+```bash
+./tool/enable_standalone_env.sh   # if not already enabled
+./tool/shorebird_release.sh android
+# ./tool/shorebird_release.sh ios
+```
+
+Upload the generated `.aab` / `.ipa` to Play Console / App Store Connect.
+
+### Push an OTA patch — only AFTER a release exists
+
+```bash
+./tool/shorebird_patch.sh android
+```
+
+If you see `No Android releases found`, run `shorebird_release.sh` first (not `flutter build`).
+
+Patches update **Dart code only** (UI, logic, bug fixes). Users get the patch on the next app launch (background download). A snackbar may prompt them to reopen the app.
+
+### Store updates vs patches
+
+- **Shorebird patch** — quick Dart-only fixes (no store review)
+- **Play Store update** (`upgrader` in app) — new native version, plugins, or when patch is not enough
+
+### Verify locally
+
+```bash
+shorebird preview --release-version 1.1.0+8
+shorebird doctor
+```
+
 ## Getting Started
 
 - [Flutter documentation](https://docs.flutter.dev/)

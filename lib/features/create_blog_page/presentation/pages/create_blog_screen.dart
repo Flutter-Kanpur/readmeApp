@@ -2,7 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/services.dart';
 
-import 'package:Readme/core/cache/blog_feed_cache.dart';
+import 'package:Readme/core/providers/repository_providers.dart';
+import 'package:Readme/core/providers/supabase_providers.dart';
+import 'package:Readme/core/state/blog_feed_provider.dart';
 import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/app_image.dart';
 import 'package:Readme/core/utils/draft_storage.dart';
@@ -15,24 +17,23 @@ import 'package:flutter_kanpur_ui_kit/flutter_kanpur_ui_kit.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_quill/quill_delta.dart';
 import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:Readme/core/network/readme_supabase.dart';
 
-class CreateBlogScreen extends StatefulWidget {
+class CreateBlogScreen extends ConsumerStatefulWidget {
   const CreateBlogScreen({super.key, this.blogId});
 
   /// When set, loads and updates an existing Supabase draft/post.
   final String? blogId;
 
   @override
-  State<CreateBlogScreen> createState() => _CreateBlogScreenState();
+  ConsumerState<CreateBlogScreen> createState() => _CreateBlogScreenState();
 }
 
-class _CreateBlogScreenState extends State<CreateBlogScreen> {
+class _CreateBlogScreenState extends ConsumerState<CreateBlogScreen> {
   static const _draftTitleKey = 'draft_title';
   static const _draftContentKey = 'draft_content';
 
@@ -41,7 +42,6 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
   final ScrollController _scrollController = ScrollController();
   final TextEditingController titleController = TextEditingController();
 
-  final supabase = ReadmeSupabase.client;
   final ImagePicker _imagePicker = ImagePicker();
   XFile? _coverImageFile;
   String? _editingBlogId;
@@ -91,15 +91,12 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
 
     setState(() => _loadingExisting = true);
     try {
-      final user = supabase.auth.currentUser;
+      final user = ref.read(currentUserProvider);
       if (user == null) return;
 
-      final row = await supabase
-          .from('blogs')
-          .select('title, content, category, tags, cover_image')
-          .eq('blog_id', blogId)
-          .eq('author_id', user.id)
-          .maybeSingle();
+      final row = await ref
+          .read(createBlogRepositoryProvider)
+          .loadEditableBlog(blogId: blogId, userId: user.id);
 
       if (row == null || !mounted) return;
 
@@ -171,17 +168,15 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
 
   // ================== AUTHOR ==================
   Future<Map<String, String?>> _getAuthorInfo() async {
-    final user = supabase.auth.currentUser;
+    final user = ref.read(currentUserProvider);
     if (user == null) {
       return {'name': null, 'image': null};
     }
 
     try {
-      final profileData = await supabase
-          .from('profiles')
-          .select()
-          .eq('id', user.id)
-          .maybeSingle();
+      final profileData = await ref
+          .read(createBlogRepositoryProvider)
+          .loadAuthorProfile(user.id);
 
       final name = profileData?['name'] as String? ??
           profileData?['full_name'] as String? ??
@@ -207,7 +202,7 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
 
   // ================== SAVE DRAFT ==================
   Future<void> _saveDraft() async {
-    final user = supabase.auth.currentUser;
+    final user = ref.read(currentUserProvider);
     if (user == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -227,20 +222,13 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
 
     try {
       final payload = await _buildBlogPayload(isPublished: false);
-      if (_editingBlogId != null) {
-        await supabase
-            .from('blogs')
-            .update(payload)
-            .eq('blog_id', _editingBlogId!)
-            .eq('author_id', user.id);
-      } else {
-        final row = await supabase
-            .from('blogs')
-            .insert({...payload, 'author_id': user.id})
-            .select('blog_id')
-            .single();
-        _editingBlogId = row['blog_id'] as String;
-      }
+      _editingBlogId = await ref
+          .read(createBlogRepositoryProvider)
+          .saveBlog(
+            userId: user.id,
+            blogId: _editingBlogId,
+            payload: payload,
+          );
 
       await _clearDraft();
       if (!mounted) return;
@@ -312,13 +300,9 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
           final fileName =
               'blogs/${DateTime.now().millisecondsSinceEpoch}.jpg';
 
-          await supabase.storage
-              .from('blog_images')
-              .uploadBinary(fileName, bytes);
-
-          final publicUrl = supabase.storage
-              .from('blog_images')
-              .getPublicUrl(fileName);
+          final publicUrl = await ref
+              .read(createBlogRepositoryProvider)
+              .uploadImage(fileName: fileName, bytes: bytes);
           coverImageUrl ??= publicUrl;
           cleanedOps.add({'insert': {'image': publicUrl}});
           cleanedOps.add({'insert': '\n'});
@@ -334,13 +318,9 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
 
           final fileName = 'blogs/${DateTime.now().millisecondsSinceEpoch}.jpg';
 
-          await supabase.storage
-              .from('blog_images')
-              .uploadBinary(fileName, bytes);
-
-          final publicUrl = supabase.storage
-              .from('blog_images')
-              .getPublicUrl(fileName);
+          final publicUrl = await ref
+              .read(createBlogRepositoryProvider)
+              .uploadImage(fileName: fileName, bytes: bytes);
           coverImageUrl ??= publicUrl;
           cleanedOps.add({'insert': {'image': publicUrl}});
           cleanedOps.add({'insert': '\n'});
@@ -365,8 +345,9 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
       final bytes = await _coverImageFile!.readAsBytes();
       final fileExt = _coverImageFile!.path.split('.').last;
       final fileName = 'covers/${DateTime.now().millisecondsSinceEpoch}.$fileExt';
-      await supabase.storage.from('blog_images').uploadBinary(fileName, bytes);
-      coverImageUrl = supabase.storage.from('blog_images').getPublicUrl(fileName);
+      coverImageUrl = await ref
+          .read(createBlogRepositoryProvider)
+          .uploadImage(fileName: fileName, bytes: bytes);
     }
 
     final rawDelta = _controller.document.toDelta().toJson();
@@ -395,7 +376,7 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
       return;
     }
 
-    final user = supabase.auth.currentUser;
+    final user = ref.read(currentUserProvider);
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Sign in to publish')),
@@ -405,19 +386,14 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
 
     try {
       final payload = await _buildBlogPayload(isPublished: true);
-      if (_editingBlogId != null) {
-        await supabase
-            .from('blogs')
-            .update(payload)
-            .eq('blog_id', _editingBlogId!)
-            .eq('author_id', user.id);
-      } else {
-        await supabase.from('blogs').insert({
-          ...payload,
-          'author_id': user.id,
-        });
-      }
-      BlogFeedCache.instance.invalidate();
+      await ref
+          .read(createBlogRepositoryProvider)
+          .saveBlog(
+            userId: user.id,
+            blogId: _editingBlogId,
+            payload: payload,
+          );
+      ref.invalidate(blogFeedProvider);
       await _clearDraft();
       if (!mounted) return;
 

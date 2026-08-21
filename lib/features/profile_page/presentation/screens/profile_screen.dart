@@ -1,83 +1,38 @@
-import 'dart:async';
-
-import 'package:Readme/core/cache/blog_engagement_store.dart';
-import 'package:Readme/core/cache/blog_feed_cache.dart';
-import 'package:Readme/core/cache/blog_like_cache.dart';
 import 'package:Readme/core/config/readme_host.dart';
-import 'package:Readme/features/blog_detail/data/datasource/blog_like_datasource.dart';
+import 'package:Readme/core/providers/supabase_providers.dart';
+import 'package:Readme/core/state/blog_engagement_provider.dart';
+import 'package:Readme/core/state/blog_feed_provider.dart';
+import 'package:Readme/core/state/blog_like_provider.dart';
 import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/app_image.dart';
 import 'package:Readme/core/utils/text_style.dart';
-import 'package:Readme/features/home_page/data/datasource/blog_remote_datasource.dart';
-import 'package:Readme/features/home_page/data/repositories/blog_repository_impl.dart';
-import 'package:Readme/features/home_page/domain/entities/blog.dart';
-import 'package:Readme/features/profile_page/data/datasource/profile_remote_datasource.dart';
+import 'package:Readme/features/profile_page/presentation/state/profile_provider.dart';
 import 'package:Readme/features/profile_page/presentation/widgets/profile_blog_card.dart';
 import 'package:Readme/features/profile_page/presentation/widgets/user_stats_card.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../shared/widgets/gradient_background.dart';
-import 'package:Readme/core/network/readme_supabase.dart';
 
-class ProfileScreen extends StatefulWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
-  final _supabase = ReadmeSupabase.client;
-  late final _blogRepository = BlogRepositoryImpl(
-    BlogRemoteDatasource(_supabase),
-  );
-
-  late final _profileDatasource = ProfileRemoteDatasource(_supabase);
-
-  User? _user;
-  Map<String, dynamic>? _profileData;
-  List<Blog> _publishedBlogs = [];
-  UserFollowStats _followStats = const UserFollowStats(
-    followers: 0,
-    following: 0,
-  );
-  bool _isLoading = true;
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   String? _appVersionLabel;
-  StreamSubscription<AuthState>? _authSub;
 
   @override
   void initState() {
     super.initState();
     _loadAppVersion();
-    _loadProfile();
-    // Host apps mint the ReadMe session asynchronously after this screen mounts.
-    _authSub = _supabase.auth.onAuthStateChange.listen((data) {
-      final event = data.event;
-      if (event == AuthChangeEvent.signedIn ||
-          event == AuthChangeEvent.tokenRefreshed ||
-          event == AuthChangeEvent.userUpdated) {
-        _loadProfile();
-      } else if (event == AuthChangeEvent.signedOut) {
-        if (!mounted) return;
-        setState(() {
-          _user = null;
-          _profileData = null;
-          _publishedBlogs = [];
-          _followStats = const UserFollowStats(followers: 0, following: 0);
-          _isLoading = false;
-        });
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _authSub?.cancel();
-    super.dispose();
+    // Profile data loads reactively via [profileProvider], which watches the
+    // current user — no manual auth subscription needed.
   }
 
   Future<void> _loadAppVersion() async {
@@ -87,61 +42,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() {
       _appVersionLabel = '${info.version} (${info.buildNumber})';
     });
-  }
-
-  Future<void> _loadProfile() async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) {
-      if (mounted) {
-        setState(() {
-          _user = null;
-          _profileData = null;
-          _publishedBlogs = [];
-          _followStats = const UserFollowStats(followers: 0, following: 0);
-          _isLoading = false;
-        });
-      }
-      return;
-    }
-
-    if (mounted) {
-      setState(() {
-        _user = user;
-        _isLoading = true;
-      });
-    }
-
-    try {
-      final profileData = await _profileDatasource.fetchProfileById(user.id);
-      final publishedBlogs = await _blogRepository.getBlogsByAuthor(user.id);
-      final followStats = await _profileDatasource.fetchFollowStats(user.id);
-
-      if (!mounted) return;
-      BlogEngagementStore.instance.seedAll(publishedBlogs);
-      setState(() {
-        _profileData = profileData;
-        _publishedBlogs = publishedBlogs;
-        _followStats = followStats;
-        _isLoading = false;
-      });
-      await _preloadLikeState(publishedBlogs);
-    } catch (e) {
-      debugPrint('Error loading profile: $e');
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _preloadLikeState(List<Blog> blogs) async {
-    final user = _supabase.auth.currentUser;
-    if (user == null || blogs.isEmpty || !mounted) return;
-
-    await BlogLikeCache.instance.preload(
-      userId: user.id,
-      blogIds: blogs.map((blog) => blog.id).toList(),
-      datasource: BlogLikeDatasource(_supabase),
-    );
-
-    if (mounted) setState(() {});
   }
 
   Future<void> _confirmLogout() async {
@@ -170,10 +70,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _logout() async {
     try {
-      BlogLikeCache.instance.invalidate();
-      BlogFeedCache.instance.invalidate();
-      BlogEngagementStore.instance.invalidate();
-      await _supabase.auth.signOut();
+      // Clear session-scoped caches; profileProvider clears itself once the
+      // current user becomes null.
+      ref.invalidate(blogLikeProvider);
+      ref.invalidate(blogFeedProvider);
+      ref.invalidate(blogEngagementProvider);
+      await ref.read(supabaseClientProvider).auth.signOut();
       if (!mounted) return;
       context.go('/welcome');
     } catch (e) {
@@ -187,37 +89,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  String get _userName {
+  String _userName(ProfileState profile) {
     final candidates = <dynamic>[
-      _profileData?['name'],
-      _profileData?['full_name'],
-      _profileData?['username'],
-      _user?.userMetadata?['full_name'],
-      _user?.userMetadata?['name'],
-      _user?.userMetadata?['username'],
-      _user?.email,
+      profile.profileData?['name'],
+      profile.profileData?['full_name'],
+      profile.profileData?['username'],
+      profile.user?.userMetadata?['full_name'],
+      profile.user?.userMetadata?['name'],
+      profile.user?.userMetadata?['username'],
+      profile.user?.email,
     ];
     for (final value in candidates) {
-      if (value is String && value.trim().isNotEmpty && value.trim() != 'null') {
+      if (value is String &&
+          value.trim().isNotEmpty &&
+          value.trim() != 'null') {
         return value.trim();
       }
     }
     return 'User';
   }
 
-  String get _subtitle {
-    final headline = _profileData?['headline'] as String?;
-    final bio = _profileData?['bio'] as String?;
+  String _subtitle(ProfileState profile) {
+    final headline = profile.profileData?['headline'] as String?;
+    final bio = profile.profileData?['bio'] as String?;
     if (headline != null && headline.trim().isNotEmpty) return headline.trim();
     if (bio != null && bio.trim().isNotEmpty) return bio.trim();
     return '';
   }
 
-  String? get _avatarUrl =>
-      _profileData?['avatar_url'] ?? _user?.userMetadata?['avatar_url'];
+  String? _avatarUrl(ProfileState profile) =>
+      profile.profileData?['avatar_url'] ??
+      profile.user?.userMetadata?['avatar_url'];
 
-  DateTime? get _memberSince {
-    final createdAt = _profileData?['created_at'];
+  DateTime? _memberSince(ProfileState profile) {
+    final createdAt = profile.profileData?['created_at'];
     if (createdAt == null) return null;
     if (createdAt is DateTime) return createdAt;
     return DateTime.tryParse(createdAt.toString());
@@ -225,14 +130,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Seed engagement counts + preload liked-state whenever the published
+    // list changes.
+    ref.listen(profileProvider, (prev, next) {
+      final blogs = next.value?.publishedBlogs;
+      if (blogs == null || identical(prev?.value?.publishedBlogs, blogs)) {
+        return;
+      }
+      ref.read(blogEngagementProvider.notifier).seedAll(blogs);
+      if (blogs.isNotEmpty) {
+        ref
+            .read(blogLikeProvider.notifier)
+            .preload(blogs.map((blog) => blog.id).toList());
+      }
+    });
+
+    final asyncProfile = ref.watch(profileProvider);
+    final profile = asyncProfile.value ?? const ProfileState();
+    final isLoading = asyncProfile.isLoading && !asyncProfile.hasValue;
+
     return GradientBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: SafeArea(
-          child: _isLoading
+          child: isLoading
               ? const Center(child: CircularProgressIndicator())
               : RefreshIndicator(
-                  onRefresh: _loadProfile,
+                  onRefresh: () => ref.read(profileProvider.notifier).refresh(),
                   child: SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(
                       parent: BouncingScrollPhysics(),
@@ -240,17 +164,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     padding: EdgeInsets.fromLTRB(20.w, 16.h, 20.w, 100.h),
                     child: Column(
                       children: [
-                        _buildProfileHeader(),
+                        _buildProfileHeader(profile),
                         SizedBox(height: 32.h),
                         Divider(color: Colors.grey.shade200, height: 1),
                         SizedBox(height: 24.h),
-                        _buildPublishedSection(),
+                        _buildPublishedSection(profile),
                         SizedBox(height: 32.h),
                         UserStatsCard(
-                          memberSince: _memberSince,
-                          followers: _followStats.followers,
-                          following: _followStats.following,
-                          totalArticles: _publishedBlogs.length,
+                          memberSince: _memberSince(profile),
+                          followers: profile.followStats.followers,
+                          following: profile.followStats.following,
+                          totalArticles: profile.publishedBlogs.length,
                         ),
                         SizedBox(height: 24.h),
                         Center(
@@ -292,20 +216,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildProfileHeader() {
+  Widget _buildProfileHeader(ProfileState profile) {
+    final avatarUrl = _avatarUrl(profile);
     return Column(
       children: [
         CircleAvatar(
           radius: 52.r,
           backgroundColor: Colors.grey.shade100,
-          backgroundImage: imageProviderFromSource(_avatarUrl),
-          child: _avatarUrl == null
+          backgroundImage: imageProviderFromSource(avatarUrl),
+          child: avatarUrl == null
               ? Icon(Icons.person, size: 52.r, color: Colors.grey.shade400)
               : null,
         ),
         SizedBox(height: 16.h),
         Text(
-          _userName,
+          _userName(profile),
           textAlign: TextAlign.center,
           style: textStyle_24BoldBlack().copyWith(
             fontSize: 24.sp,
@@ -314,7 +239,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         SizedBox(height: 12.h),
         Text(
-          _subtitle,
+          _subtitle(profile),
           textAlign: TextAlign.center,
           style: textStyle_14RegularGrey().copyWith(
             fontSize: 14.sp,
@@ -345,7 +270,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildPublishedSection() {
+  Widget _buildPublishedSection(ProfileState profile) {
+    final publishedBlogs = profile.publishedBlogs;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -359,7 +285,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
         SizedBox(height: 16.h),
-        if (_publishedBlogs.isEmpty)
+        if (publishedBlogs.isEmpty)
           Padding(
             padding: EdgeInsets.symmetric(vertical: 32.h),
             child: Center(
@@ -373,10 +299,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: _publishedBlogs.length,
-            separatorBuilder: (_, __) => SizedBox(height: 16.h),
+            itemCount: publishedBlogs.length,
+            separatorBuilder: (_, _) => SizedBox(height: 16.h),
             itemBuilder: (context, index) {
-              final blog = _publishedBlogs[index];
+              final blog = publishedBlogs[index];
               return ProfileBlogCard(
                 blog: blog,
                 onEdit: () => context.push('/edit/${blog.id}'),

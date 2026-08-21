@@ -1,5 +1,4 @@
-import 'package:Readme/core/cache/blog_like_cache.dart';
-import 'package:Readme/core/network/readme_supabase.dart';
+import 'package:Readme/core/providers/supabase_providers.dart';
 import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/app_image.dart';
 import 'package:Readme/core/utils/quill_content_parser.dart';
@@ -8,10 +7,11 @@ import 'package:Readme/features/blog_detail/presentation/widgets/blog_support_bu
 import 'package:Readme/features/blog_detail/presentation/widgets/blog_view_count.dart';
 import 'package:Readme/features/home_page/domain/entities/blog.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
-class BlogCard extends StatelessWidget {
+class BlogCard extends ConsumerWidget {
   final Blog blog;
 
   const BlogCard({super.key, required this.blog});
@@ -21,9 +21,10 @@ class BlogCard extends StatelessWidget {
     return preview.isEmpty ? null : preview;
   }
 
-  String? _coverUrl() {
+  String? _coverUrl(WidgetRef ref) {
+    final client = ref.read(supabaseClientProvider);
     String storagePublicUrl(String path) {
-      return ReadmeSupabase.client.storage.from('blog_images').getPublicUrl(path);
+      return client.storage.from('blog_images').getPublicUrl(path);
     }
 
     return resolveBlogImageUrl(
@@ -37,7 +38,7 @@ class BlogCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final authors = blog.allAuthors;
     final hasCoauthors = authors.length > 1;
     final authorNames = authors.map((a) => a.name).join(', ');
@@ -45,7 +46,7 @@ class BlogCard extends StatelessWidget {
         blog.communityName != null && blog.communityName!.trim().isNotEmpty;
     final hasCategory = blog.category.isNotEmpty;
     final preview = _previewText(blog.content);
-    final coverUrl = _coverUrl();
+    final coverUrl = _coverUrl(ref);
 
     return GestureDetector(
       onTap: () => context.push('/blog/${blog.id}', extra: blog),
@@ -173,7 +174,6 @@ class BlogCard extends StatelessWidget {
                 BlogSupportButton(
                   blogId: blog.id,
                   initialLikeCount: blog.likeCount,
-                  initialIsLiked: BlogLikeCache.instance.isLiked(blog.id),
                   compact: true,
                 ),
                 SizedBox(width: 14.w),
