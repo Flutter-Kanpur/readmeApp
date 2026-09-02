@@ -98,7 +98,7 @@ flutter:
     - assets/lottie/
     - assets/lottie/empty.json
     # Standalone only — added by tool/enable_standalone_env.sh (gitignored .env)
-    - .env
+#    - .env
    # Standalone only — added by tool/enable_standalone_env.sh (gitignored .env)
 #    - .env
 
