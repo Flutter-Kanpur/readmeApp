@@ -63,18 +63,23 @@ Look for issues labelled **`good first issue`** on GitHub. Good areas to start:
 
 ## How to contribute
 
-1. **Pick an issue** — comment on it so others know you're working on it
-2. **Fork and branch** — branch name: `fix/issue-title` or `feat/feature-name`
-3. **Make your change** — keep it focused; one issue per PR
-4. **Test on both platforms** if possible — at minimum run on Android emulator
-5. **Open a PR** — describe what you changed and why, link the issue
+1. **Star the repo** — [github.com/Flutter-Kanpur/readmeApp](https://github.com/Flutter-Kanpur/readmeApp) — it helps others find the project
+2. **Fork it** — click Fork on GitHub, then clone your fork locally
+3. **Pick an issue** — comment on it so others know you're working on it
+4. **Create a branch** — branch name: `fix/issue-title` or `feat/feature-name`
+5. **Make your change** — keep it focused; one issue per PR
+6. **Test on both platforms** if possible — at minimum run on Android emulator
+7. **Open a PR** — describe what you changed and why, link the issue
 
 ```bash
+# After forking on GitHub:
+git clone https://github.com/<your-username>/readmeApp.git
+cd readmeApp
 git checkout -b fix/your-issue-title
 # make changes
 git commit -m "fix: short description"
 git push origin fix/your-issue-title
-# open PR on GitHub
+# open PR on GitHub against Flutter-Kanpur/readmeApp
 ```
 
 ## Before committing
