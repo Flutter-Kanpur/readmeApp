@@ -6,6 +6,7 @@ import 'package:Readme/core/utils/app_colors.dart';
 import 'package:Readme/core/utils/text_style.dart';
 import 'package:Readme/features/blog_detail/data/datasource/blog_like_datasource.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
@@ -76,6 +77,8 @@ class _BlogSupportButtonState extends ConsumerState<BlogSupportButton>
       context.push('/signin');
       return;
     }
+
+    HapticFeedback.lightImpact();
 
     final engagement = ref.read(blogEngagementProvider.notifier);
     // Ensure a base count exists before mutating so the delta increments from
@@ -153,9 +156,7 @@ class _BlogSupportButtonState extends ConsumerState<BlogSupportButton>
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: _actionLoading
-            ? null
-            : () => _toggleSupport(isLiked, likeCount),
+        onTap: _actionLoading ? null : () => _toggleSupport(isLiked, likeCount),
         borderRadius: BorderRadius.circular(999),
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 4.h),
@@ -189,9 +190,7 @@ class _BlogSupportButtonState extends ConsumerState<BlogSupportButton>
       color: isLiked ? const Color(0xFFFFF1F2) : Colors.white,
       borderRadius: BorderRadius.circular(999),
       child: InkWell(
-        onTap: _actionLoading
-            ? null
-            : () => _toggleSupport(isLiked, likeCount),
+        onTap: _actionLoading ? null : () => _toggleSupport(isLiked, likeCount),
         borderRadius: BorderRadius.circular(999),
         child: Container(
           padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 12.h),
